@@ -2,7 +2,7 @@
     <DialogContent>
         <div style="text-align: center; padding: 12px 8px;">
             <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
-            <MudText Typo="Typo.h5" Style="margin-top: 12px; color: #1A237E;">Successfully Created</MudText>
+            <MudText Typo="Typo.h5" Style="margin-top: 12px; color: #1A237E;">@Title</MudText>
             <MudText Typo="Typo.body1" Style="margin-top: 8px; color: #546E7A;">@Message</MudText>
         </div>
     </DialogContent>
@@ -14,6 +14,7 @@
 @code {
     [Parameter] public bool Visible { get; set; }
     [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public string Title { get; set; } = "Successfully Created";
     [Parameter] public string Message { get; set; } = string.Empty;
 
     private Task Close()

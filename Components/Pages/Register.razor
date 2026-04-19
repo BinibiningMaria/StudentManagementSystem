@@ -12,7 +12,7 @@
 <MudPaper Elevation="4" Style="padding: 32px;">
     <MudText Typo="Typo.h5" Style="color: #1A237E; margin-bottom: 8px; text-align: center;">Create Account</MudText>
     <MudText Typo="Typo.body2" Style="color: #546E7A; text-align: center; margin-bottom: 24px;">
-        Step @_step of 4
+        Step @_step of @TotalSteps
     </MudText>
 
     @if (_step == 1)
@@ -20,28 +20,29 @@
         <MudSelect T="UserRole?" Value="_selectedRole" ValueChanged="HandleRoleChanged" Label="Role" Variant="Variant.Outlined" Clearable="true">
             <MudSelectItem T="UserRole?" Value="@UserRole.Student">Student</MudSelectItem>
             <MudSelectItem T="UserRole?" Value="@UserRole.Instructor">Instructor</MudSelectItem>
+            <MudSelectItem T="UserRole?" Value="@UserRole.Admin">Admin</MudSelectItem>
         </MudSelect>
     }
     else if (_step == 2)
     {
-        <MudTextField @bind-Value="_firstName" Label="First Name" Variant="Variant.Outlined" />
-        <MudTextField @bind-Value="_middleName" Label="Middle Name" Variant="Variant.Outlined" Style="margin-top: 12px;" />
-        <MudTextField @bind-Value="_surname" Label="Surname" Variant="Variant.Outlined" Style="margin-top: 12px;" />
-        <MudTextField @bind-Value="_suffix" Label="Suffix" Variant="Variant.Outlined" Style="margin-top: 12px;" />
-        <MudSelect T="string" Value="_gender" ValueChanged="HandleGenderChanged" Label="Gender" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
+        <MudTextField @bind-Value="_firstName" Label="First Name*" Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="_middleName" Label="Middle Name*" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+        <MudTextField @bind-Value="_surname" Label="Surname*" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+        <MudTextField @bind-Value="_suffix" Label="Suffix (Optional)" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+        <MudSelect T="string" Value="_gender" ValueChanged="HandleGenderChanged" Label="Gender*" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
             @foreach (var gender in Genders)
             {
                 <MudSelectItem T="string" Value="@gender">@gender</MudSelectItem>
             }
         </MudSelect>
-        <MudSelect T="string" Value="_civilStatus" ValueChanged="HandleCivilStatusChanged" Label="Civil Status" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
+        <MudSelect T="string" Value="_civilStatus" ValueChanged="HandleCivilStatusChanged" Label="Civil Status*" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
             @foreach (var civilStatus in CivilStatuses)
             {
                 <MudSelectItem T="string" Value="@civilStatus">@civilStatus</MudSelectItem>
             }
         </MudSelect>
     }
-    else if (_step == 3)
+    else if (_step == 3 && _selectedRole != UserRole.Admin)
     {
         <MudTextField @bind-Value="_email" Label="Email" Variant="Variant.Outlined" />
         <MudTextField @bind-Value="_address" Label="Address" Variant="Variant.Outlined" Lines="3" Style="margin-top: 12px;" />
@@ -80,28 +81,29 @@
     }
     else
     {
+        @* This is the final step for all roles: Username + Password *@
         <MudTextField @bind-Value="_username" Label="Username" Variant="Variant.Outlined" />
         <div style="margin-top: 12px;">
-            <PasswordField Value="_password" ValueChanged="HandlePasswordChanged" Label="Password" Required="true" />
+            <PasswordField Value="@_password" ValueChanged="HandlePasswordChanged" Label="Password*" Required="true" />
         </div>
         <div style="margin-top: 12px;">
-            <PasswordField Value="_confirmPassword" ValueChanged="HandleConfirmPasswordChanged" Label="Confirm Password" Required="true" />
+            <PasswordField Value="@_confirmPassword" ValueChanged="HandleConfirmPasswordChanged" Label="Confirm Password*" Required="true" />
         </div>
     }
 
     <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 24px;">
         @if (_step == 1)
         {
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Href="/login">
+            <MudButton Variant="Variant.Outlined" Style="color: #1A237E; border-color: #1A237E;" Href="/login">
                 Back to Login
             </MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextStep" Disabled="@(!CanMoveNext)">
                 Next
             </MudButton>
         }
-        else if (_step < 4)
+        else if (_step < TotalSteps)
         {
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="PreviousStep">
+            <MudButton Variant="Variant.Outlined" Style="color: #1A237E; border-color: #1A237E;" OnClick="PreviousStep">
                 Previous
             </MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextStep" Disabled="@(!CanMoveNext)">
@@ -110,7 +112,7 @@
         }
         else
         {
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="PreviousStep">
+            <MudButton Variant="Variant.Outlined" Style="color: #1A237E; border-color: #1A237E;" OnClick="PreviousStep">
                 Previous
             </MudButton>
             <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="HandleRegister" Disabled="@(!CanCreate || _isLoading)">
@@ -134,7 +136,7 @@
     </div>
 </MudPaper>
 
-<FloatingSuccessModal Visible="_showSuccessModal" VisibleChanged="HandleSuccessModalChanged" Message="_successMessage" />
+<FloatingSuccessModal Visible="_showSuccessModal" VisibleChanged="HandleSuccessModalChanged" Message="@_successMessage" />
 
 @code {
     private int _step = 1;
@@ -182,10 +184,15 @@
         "Entertainment and Media Computing (BS EMC)"
     ];
 
+    // Admin has 3 steps (Role, Personal Info, Username+Password)
+    // Student/Instructor has 4 steps (Role, Personal Info, Academic/Professional Info, Username+Password)
+    private int TotalSteps => _selectedRole == UserRole.Admin ? 3 : 4;
+
     private bool CanMoveNext => _step switch
     {
         1 => _selectedRole.HasValue,
         2 => !string.IsNullOrWhiteSpace(_firstName)
+            && !string.IsNullOrWhiteSpace(_middleName)
             && !string.IsNullOrWhiteSpace(_surname)
             && !string.IsNullOrWhiteSpace(_gender)
             && !string.IsNullOrWhiteSpace(_civilStatus),
@@ -260,7 +267,7 @@
 
     private void NextStep()
     {
-        if (_step < 4 && CanMoveNext)
+        if (_step < TotalSteps && CanMoveNext)
         {
             _step++;
         }
@@ -312,9 +319,18 @@
                 Password = _password
             });
 
-            _successMessage = _selectedRole == UserRole.Student
-                ? $"Welcome {_firstName}!"
-                : $"Welcome {PersonNameHelper.BuildInstructorHonorific(_gender, _civilStatus)} {_surname}!";
+            if (_selectedRole == UserRole.Admin)
+            {
+                _successMessage = $"Welcome Admin {_firstName}!";
+            }
+            else if (_selectedRole == UserRole.Student)
+            {
+                _successMessage = $"Welcome {_firstName}!";
+            }
+            else
+            {
+                _successMessage = $"Welcome {PersonNameHelper.BuildInstructorHonorific(_gender, _civilStatus)} {_surname}!";
+            }
             _showSuccessModal = true;
         }
         catch (InvalidOperationException ex)

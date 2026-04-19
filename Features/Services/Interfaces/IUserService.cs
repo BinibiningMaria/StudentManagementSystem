@@ -9,4 +9,8 @@ public interface IUserService
     Task<User?> ValidateLoginAsync(string username, string password, UserRole role);
     Task<User> RegisterAsync(RegisterRequest request);
     Task<User?> GetUserByIdAsync(int id);
+    Task<IEnumerable<User>> GetAllUsersAsync();
+    Task UpdateUserAsync(User user);
+    Task UpdateUserWithPasswordAsync(User user, string newPassword);
+    Task DeleteUserAsync(int id);
 }

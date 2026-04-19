@@ -3,6 +3,8 @@
 
 @using Microsoft.AspNetCore.WebUtilities
 @using StudentManagementSystem.Features.Services.Interfaces
+@using StudentManagementSystem.Features.Data.Enums
+@using StudentManagementSystem.Features.Helpers
 
 @inject NavigationManager Navigation
 @inject CustomAuthenticationStateProvider AuthProvider
@@ -17,12 +19,13 @@
     <MudSelect T="UserRole?" Value="_selectedRole" ValueChanged="HandleRoleChanged" Label="Role" Variant="Variant.Outlined" Clearable="true">
         <MudSelectItem T="UserRole?" Value="@UserRole.Student">Student</MudSelectItem>
         <MudSelectItem T="UserRole?" Value="@UserRole.Instructor">Instructor</MudSelectItem>
+        <MudSelectItem T="UserRole?" Value="@UserRole.Admin">Admin</MudSelectItem>
     </MudSelect>
 
     <MudTextField @bind-Value="_username" Label="Username" Variant="Variant.Outlined"
                   AdornmentIcon="@Icons.Material.Filled.Person" Adornment="Adornment.Start" Style="margin-top: 16px;" />
 
-    <PasswordField Value="_password" ValueChanged="HandlePasswordChanged" Label="Password" Required="true" />
+    <PasswordField Value="@_password" ValueChanged="HandlePasswordChanged" Label="Password" Required="true" />
 
     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
                OnClick="HandleLogin" Style="margin-top: 24px;" Disabled="@(!CanLogin || _isLoading)">
@@ -44,12 +47,19 @@
     </div>
 </MudPaper>
 
+<FloatingSuccessModal Visible="_showWelcomeModal" VisibleChanged="HandleWelcomeModalClosed" Title="Welcome!" Message="@_welcomeMessage" />
+
 @code {
     private UserRole? _selectedRole;
     private string _username = "";
     private string _password = "";
     private bool _isLoading;
     private string _targetUrl = "/dashboard";
+
+    // Welcome modal
+    private bool _showWelcomeModal;
+    private string _welcomeMessage = "";
+
     private bool CanLogin => _selectedRole.HasValue
         && !string.IsNullOrWhiteSpace(_username)
         && !string.IsNullOrWhiteSpace(_password);
@@ -92,8 +102,17 @@
             if (user is not null)
             {
                 await AuthProvider.MarkUserAsAuthenticated(user);
-                Snackbar.Add("Login successful!", Severity.Success);
-                Navigation.NavigateTo(_targetUrl, replace: true);
+
+                // Build role-based welcome message
+                _welcomeMessage = user.Role switch
+                {
+                    UserRole.Student => $"Welcome {user.FirstName}!",
+                    UserRole.Instructor => $"Welcome {PersonNameHelper.BuildInstructorHonorific(user.Gender, user.CivilStatus)}. {user.Surname}!",
+                    UserRole.Admin => $"Welcome Admin {user.FirstName}!",
+                    _ => $"Welcome {user.FirstName}!"
+                };
+
+                _showWelcomeModal = true;
             }
             else
             {
@@ -108,5 +127,15 @@
         {
             _isLoading = false;
         }
+    }
+
+    private Task HandleWelcomeModalClosed(bool visible)
+    {
+        _showWelcomeModal = visible;
+        if (!visible)
+        {
+            Navigation.NavigateTo(_targetUrl, replace: true);
+        }
+        return Task.CompletedTask;
     }
 }

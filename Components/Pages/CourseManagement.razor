@@ -1,4 +1,4 @@
-﻿@page "/courses"
+@page "/courses"
 @page "/coursemanagement"
 
 @using StudentManagementSystem.Features.Data.Models
@@ -25,7 +25,7 @@ else
         </MudAlert>
     }
 
-    @if (_isInstructor)
+    @if (_isInstructor || _isAdmin)
     {
         <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add" Style="margin-bottom: 16px;">
             Add Course
@@ -41,7 +41,7 @@ else
             <MudTh>Name</MudTh>
             <MudTh>Description</MudTh>
             <MudTh>Units</MudTh>
-            @if (_isInstructor)
+            @if (_isInstructor || _isAdmin)
             {
                 <MudTh>Actions</MudTh>
             }
@@ -51,7 +51,7 @@ else
             <MudTd>@context.CourseName</MudTd>
             <MudTd>@context.Description</MudTd>
             <MudTd>@context.Units</MudTd>
-            @if (_isInstructor)
+            @if (_isInstructor || _isAdmin)
             {
                 <MudTd>
                     <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" OnClick="@(() => OpenViewDialog(context))" />
@@ -65,7 +65,7 @@ else
         </NoRecordsContent>
     </MudTable>
 
-    @if (_isInstructor)
+    @if (_isInstructor || _isAdmin)
     {
         <MudDialog @bind-Visible="_dialogOpen">
             <DialogContent>
@@ -127,6 +127,7 @@ else
     private Course? _selectedCourse;
     private bool _isAuthenticated;
     private bool _isInstructor;
+    private bool _isAdmin;
     private string? _loadError;
 
     protected override async Task OnInitializedAsync()
@@ -134,6 +135,7 @@ else
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
         _isInstructor = authState.User.IsInRole("Instructor");
+        _isAdmin = authState.User.IsInRole("Admin");
 
         if (_isAuthenticated)
         {

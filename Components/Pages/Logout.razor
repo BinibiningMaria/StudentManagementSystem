@@ -6,20 +6,38 @@
 
 <PageTitle>Logout</PageTitle>
 
-@code {
-    private bool _redirectPending;
+<MudDialog @bind-Visible="_showLogoutDialog" Options="_dialogOptions">
+    <DialogContent>
+        <div style="text-align: center; padding: 16px 8px;">
+            <MudIcon Icon="@Icons.Material.Filled.Logout" Size="Size.Large" Style="color: #FF9800;" />
+            <MudText Typo="Typo.h6" Style="margin-top: 12px; color: #1A237E;">Do you want to Logout?</MudText>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Default" Variant="Variant.Outlined" OnClick="CancelLogout">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="ConfirmLogout">Logout</MudButton>
+    </DialogActions>
+</MudDialog>
 
-    protected override async Task OnParametersSetAsync()
+@code {
+    private bool _showLogoutDialog = true;
+    private readonly DialogOptions _dialogOptions = new()
     {
-        await AuthProvider.MarkUserAsLoggedOut();
-        _redirectPending = true;
+        CloseOnEscapeKey = false,
+        BackdropClick = false,
+        NoHeader = true
+    };
+
+    private void CancelLogout()
+    {
+        _showLogoutDialog = false;
+        Navigation.NavigateTo("/dashboard", replace: true);
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    private async Task ConfirmLogout()
     {
-        if (firstRender && _redirectPending)
-        {
-            Navigation.NavigateTo("/", replace: true);
-        }
+        _showLogoutDialog = false;
+        await AuthProvider.MarkUserAsLoggedOut();
+        Navigation.NavigateTo("/", replace: true);
     }
 }

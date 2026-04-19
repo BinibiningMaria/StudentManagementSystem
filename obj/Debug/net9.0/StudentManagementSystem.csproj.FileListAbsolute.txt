@@ -120,6 +120,7 @@ C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\St
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\StudentManagementSystem.AssemblyInfo.cs
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\StudentManagementSystem.csproj.CoreCompileInputs.cache
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\StudentManagementSystem.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\StudentManagementSystem.sourcelink.json
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\rjimswa.dswa.cache.json
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\rjsmrazor.dswa.cache.json
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\rjsmcshtml.dswa.cache.json
@@ -127,7 +128,7 @@ C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\sc
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\compressed\tzxjg6is5z-{0}-o2b68hjqqd-o2b68hjqqd.gz
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\compressed\0wz98yz2xy-{0}-8dleymzaev-8dleymzaev.gz
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\compressed\o7k4cxtn0u-{0}-0ykner63ol-0ykner63ol.gz
-C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\compressed\zizyr41zw6-{0}-khy4lop6wu-khy4lop6wu.gz
+C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\compressed\zizyr41zw6-{0}-3orxz7sin0-3orxz7sin0.gz
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\compressed\02tmapkftl-{0}-bqjiyaj88i-bqjiyaj88i.gz
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\compressed\4hootfeejm-{0}-c2jlpeoesf-c2jlpeoesf.gz
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\compressed\7wbtrnigm9-{0}-erw9l3u2r3-erw9l3u2r3.gz
@@ -177,7 +178,6 @@ C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\st
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\staticwebassets.development.json
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\staticwebassets.build.endpoints.json
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\swae.build.ex.cache
-C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\staticwebassets.upToDateCheck.txt
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\StudentM.D74F523C.Up2Date
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\StudentManagementSystem.dll
 C:\Users\provu\Desktop\Maria Basarte\StudentManagementSystem\obj\Debug\net9.0\refint\StudentManagementSystem.dll

@@ -1,4 +1,4 @@
-﻿@page "/students"
+@page "/students"
 @page "/studentmanagement"
 
 @using StudentManagementSystem.Features.Data.Models
@@ -14,10 +14,10 @@
 {
     <RedirectToLogin />
 }
-else if (!_isInstructor)
+else if (!_isInstructor && !_isAdmin)
 {
     <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
-        Instructor access is required to manage students.
+        Instructor or Admin access is required to manage students.
     </MudAlert>
 }
 else
@@ -186,6 +186,7 @@ else
     private Student? _selectedStudent;
     private bool _isAuthenticated;
     private bool _isInstructor;
+    private bool _isAdmin;
     private string? _loadError;
 
     protected override async Task OnInitializedAsync()
@@ -193,8 +194,9 @@ else
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
         _isInstructor = authState.User.IsInRole("Instructor");
+        _isAdmin = authState.User.IsInRole("Admin");
 
-        if (_isAuthenticated && _isInstructor)
+        if (_isAuthenticated && (_isInstructor || _isAdmin))
         {
             await LoadData();
         }

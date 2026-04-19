@@ -1,0 +1,470 @@
+@page "/users"
+@page "/usermanagement"
+
+@using StudentManagementSystem.Features.Data.Models
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject AuthenticationStateProvider AuthProvider
+@inject IUserService UserService
+@inject ISnackbar Snackbar
+
+<PageTitle>User Management</PageTitle>
+
+@if (!_isAuthenticated)
+{
+    <RedirectToLogin />
+}
+else if (!_isAdmin)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+        Admin access is required to manage users.
+    </MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" Style="color: #1A237E; margin-bottom: 16px;">User Management</MudText>
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Style="margin-bottom: 16px;">
+            User data is temporarily unavailable. @_loadError
+        </MudAlert>
+    }
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenAddDialog" StartIcon="@Icons.Material.Filled.PersonAdd" Style="margin-bottom: 16px;">
+        Add User
+    </MudButton>
+
+    <MudTable Items="@_users" Hover="true" Elevation="2" Dense="true" Style="background: white;">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6" Style="color: #1A237E;">Users</MudText>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Username</MudTh>
+            <MudTh>Role</MudTh>
+            <MudTh>First Name</MudTh>
+            <MudTh>Middle Name</MudTh>
+            <MudTh>Surname</MudTh>
+            <MudTh>Suffix</MudTh>
+            <MudTh>Gender</MudTh>
+            <MudTh>Civil Status</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Created At</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.Username</MudTd>
+            <MudTd>@context.Role</MudTd>
+            <MudTd>@context.FirstName</MudTd>
+            <MudTd>@context.MiddleName</MudTd>
+            <MudTd>@context.Surname</MudTd>
+            <MudTd>@DisplayValue(context.Suffix)</MudTd>
+            <MudTd>@context.Gender</MudTd>
+            <MudTd>@context.CivilStatus</MudTd>
+            <MudTd>@DisplayValue(context.Email)</MudTd>
+            <MudTd>@context.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" OnClick="@(() => OpenViewDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Align="Align.Center" Style="color: #546E7A;">No users found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    @* View Dialog *@
+    <MudDialog @bind-Visible="_viewDialogOpen">
+        <DialogContent>
+            @if (_selectedUser is not null)
+            {
+                <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">User Details</MudText>
+                <MudText><strong>Username:</strong> @_selectedUser.Username</MudText>
+                <MudText><strong>Role:</strong> @_selectedUser.Role</MudText>
+                <MudText><strong>Full Name:</strong> @_selectedUser.FullName</MudText>
+                <MudText><strong>Gender:</strong> @_selectedUser.Gender</MudText>
+                <MudText><strong>Civil Status:</strong> @_selectedUser.CivilStatus</MudText>
+                <MudText><strong>Email:</strong> @DisplayValue(_selectedUser.Email)</MudText>
+                <MudText><strong>Address:</strong> @DisplayValue(_selectedUser.Address)</MudText>
+                @if (_selectedUser.Role == UserRole.Instructor)
+                {
+                    <MudText><strong>Major Profession:</strong> @DisplayValue(_selectedUser.MajorProfession)</MudText>
+                }
+                @if (_selectedUser.StudentId.HasValue)
+                {
+                    <MudText><strong>Student ID:</strong> @_selectedUser.StudentId</MudText>
+                }
+                <MudText><strong>Created At:</strong> @_selectedUser.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss")</MudText>
+            }
+        </DialogContent>
+        <DialogActions>
+            <MudButton Color="Color.Primary" OnClick="CloseViewDialog">Close</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    @* Add Dialog *@
+    <MudDialog @bind-Visible="_addDialogOpen">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">Add User</MudText>
+            <MudSelect T="UserRole" @bind-Value="_newUserRole" Label="Role" Variant="Variant.Outlined">
+                <MudSelectItem T="UserRole" Value="@UserRole.Student">Student</MudSelectItem>
+                <MudSelectItem T="UserRole" Value="@UserRole.Instructor">Instructor</MudSelectItem>
+                <MudSelectItem T="UserRole" Value="@UserRole.Admin">Admin</MudSelectItem>
+            </MudSelect>
+            <MudTextField @bind-Value="_newUsername" Label="Username" Variant="Variant.Outlined" Required Style="margin-top: 12px;" />
+            <MudTextField @bind-Value="_newFirstName" Label="First Name" Variant="Variant.Outlined" Required Style="margin-top: 12px;" />
+            <MudTextField @bind-Value="_newMiddleName" Label="Middle Name" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+            <MudTextField @bind-Value="_newSurname" Label="Surname" Variant="Variant.Outlined" Required Style="margin-top: 12px;" />
+            <MudTextField @bind-Value="_newSuffix" Label="Suffix (Optional)" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+            <MudSelect T="string" @bind-Value="_newGender" Label="Gender" Variant="Variant.Outlined" Style="margin-top: 12px;">
+                <MudSelectItem T="string" Value="@("Male")">Male</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Female")">Female</MudSelectItem>
+            </MudSelect>
+            <MudSelect T="string" @bind-Value="_newCivilStatus" Label="Civil Status" Variant="Variant.Outlined" Style="margin-top: 12px;">
+                <MudSelectItem T="string" Value="@("Single")">Single</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Married")">Married</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Widowed")">Widowed</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Divorced")">Divorced</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Separated")">Separated</MudSelectItem>
+            </MudSelect>
+            <div style="margin-top: 12px;">
+                <PasswordField Value="@_newPassword" ValueChanged="HandleNewPasswordChanged" Label="Password" Required="true" />
+            </div>
+            <div style="margin-top: 12px;">
+                <PasswordField Value="@_newConfirmPassword" ValueChanged="HandleNewConfirmPasswordChanged" Label="Confirm Password" Required="true" />
+            </div>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="AddUser" Disabled="@(!CanAddUser)">Save</MudButton>
+            <MudButton Color="Color.Default" OnClick="CloseAddDialog">Cancel</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    @* Edit Dialog *@
+    <MudDialog @bind-Visible="_editDialogOpen">
+        <DialogContent>
+            @if (_editingUser is not null)
+            {
+                <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">Edit User</MudText>
+                <MudTextField @bind-Value="_editingUser.Username" Label="Username" Variant="Variant.Outlined" Required />
+                <MudTextField @bind-Value="_editingUser.FirstName" Label="First Name" Variant="Variant.Outlined" Required Style="margin-top: 12px;" />
+                <MudTextField @bind-Value="_editingUser.MiddleName" Label="Middle Name" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+                <MudTextField @bind-Value="_editingUser.Surname" Label="Surname" Variant="Variant.Outlined" Required Style="margin-top: 12px;" />
+                <MudTextField @bind-Value="_editingUser.Suffix" Label="Suffix (Optional)" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+                <MudSelect T="string" @bind-Value="_editingUser.Gender" Label="Gender" Variant="Variant.Outlined" Style="margin-top: 12px;">
+                    <MudSelectItem T="string" Value="@("Male")">Male</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Female")">Female</MudSelectItem>
+                </MudSelect>
+                <MudSelect T="string" @bind-Value="_editingUser.CivilStatus" Label="Civil Status" Variant="Variant.Outlined" Style="margin-top: 12px;">
+                    <MudSelectItem T="string" Value="@("Single")">Single</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Married")">Married</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Widowed")">Widowed</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Divorced")">Divorced</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Separated")">Separated</MudSelectItem>
+                </MudSelect>
+                <MudTextField @bind-Value="_editingUser.Email" Label="Email" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+                <MudTextField @bind-Value="_editingUser.Address" Label="Address" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+                <MudDivider Style="margin-top: 16px; margin-bottom: 8px;" />
+                <MudText Typo="Typo.body2" Style="color: #546E7A; margin-bottom: 8px;">Leave password blank to keep current password</MudText>
+                <div style="margin-top: 4px;">
+                    <PasswordField Value="@_editPassword" ValueChanged="HandleEditPasswordChanged" Label="New Password (Optional)" Required="false" />
+                </div>
+                <div style="margin-top: 12px;">
+                    <PasswordField Value="@_editConfirmPassword" ValueChanged="HandleEditConfirmPasswordChanged" Label="Confirm New Password" Required="false" />
+                </div>
+            }
+        </DialogContent>
+        <DialogActions>
+            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveEditUser">Save</MudButton>
+            <MudButton Color="Color.Default" OnClick="CloseEditDialog">Cancel</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    @* Delete Dialog *@
+    <MudDialog @bind-Visible="_deleteDialogOpen">
+        <DialogContent>
+            @if (_selectedUser is not null)
+            {
+                <div style="text-align: center; padding: 12px 8px;">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Large" />
+                    <MudText Typo="Typo.h6" Style="margin-top: 12px; color: #1A237E;">Delete User</MudText>
+                    <MudText Typo="Typo.body1" Style="margin-top: 8px; color: #546E7A;">
+                        Are you sure you want to delete <strong>@_selectedUser.Username</strong> (@_selectedUser.FullName)?
+                    </MudText>
+                </div>
+            }
+        </DialogContent>
+        <DialogActions>
+            <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="DeleteUser">Delete</MudButton>
+            <MudButton Color="Color.Default" OnClick="CloseDeleteDialog">Cancel</MudButton>
+        </DialogActions>
+    </MudDialog>
+
+    @* Success Modal *@
+    <FloatingSuccessModal Visible="_showSuccessModal" VisibleChanged="HandleSuccessModalChanged" Message="@_successMessage" />
+}
+
+@code {
+    private List<User> _users = new();
+    private User? _selectedUser;
+    private User? _editingUser;
+    private bool _isAuthenticated;
+    private bool _isAdmin;
+    private string? _loadError;
+
+    // View Dialog
+    private bool _viewDialogOpen;
+
+    // Add Dialog
+    private bool _addDialogOpen;
+    private UserRole _newUserRole = UserRole.Student;
+    private string _newUsername = "";
+    private string _newFirstName = "";
+    private string _newMiddleName = "";
+    private string _newSurname = "";
+    private string _newSuffix = "";
+    private string _newGender = "";
+    private string _newCivilStatus = "";
+    private string _newPassword = "";
+    private string _newConfirmPassword = "";
+
+    // Edit Dialog
+    private bool _editDialogOpen;
+    private string _editPassword = "";
+    private string _editConfirmPassword = "";
+
+    // Delete Dialog
+    private bool _deleteDialogOpen;
+
+    // Success Modal
+    private bool _showSuccessModal;
+    private string _successMessage = "";
+
+    private bool CanAddUser => !string.IsNullOrWhiteSpace(_newUsername)
+        && !string.IsNullOrWhiteSpace(_newFirstName)
+        && !string.IsNullOrWhiteSpace(_newSurname)
+        && !string.IsNullOrWhiteSpace(_newGender)
+        && !string.IsNullOrWhiteSpace(_newCivilStatus)
+        && !string.IsNullOrWhiteSpace(_newPassword)
+        && _newPassword == _newConfirmPassword;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _isAdmin = authState.User.IsInRole("Admin");
+
+        if (_isAuthenticated && _isAdmin)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            _users = (await UserService.GetAllUsersAsync()).ToList();
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            _users = new();
+            _loadError = ex.Message;
+        }
+    }
+
+    // View
+    private void OpenViewDialog(User user)
+    {
+        _selectedUser = user;
+        _viewDialogOpen = true;
+    }
+
+    private void CloseViewDialog()
+    {
+        _viewDialogOpen = false;
+    }
+
+    // Add
+    private void OpenAddDialog()
+    {
+        _newUserRole = UserRole.Student;
+        _newUsername = "";
+        _newFirstName = "";
+        _newMiddleName = "";
+        _newSurname = "";
+        _newSuffix = "";
+        _newGender = "";
+        _newCivilStatus = "";
+        _newPassword = "";
+        _newConfirmPassword = "";
+        _addDialogOpen = true;
+    }
+
+    private void CloseAddDialog()
+    {
+        _addDialogOpen = false;
+    }
+
+    private Task HandleNewPasswordChanged(string password)
+    {
+        _newPassword = password;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleNewConfirmPasswordChanged(string password)
+    {
+        _newConfirmPassword = password;
+        return Task.CompletedTask;
+    }
+
+    private async Task AddUser()
+    {
+        if (!CanAddUser) return;
+
+        try
+        {
+            await UserService.RegisterAsync(new RegisterRequest
+            {
+                Role = _newUserRole,
+                FirstName = _newFirstName,
+                MiddleName = _newMiddleName,
+                Surname = _newSurname,
+                Suffix = _newSuffix,
+                Gender = _newGender,
+                CivilStatus = _newCivilStatus,
+                Username = _newUsername,
+                Password = _newPassword
+            });
+
+            _addDialogOpen = false;
+            _successMessage = $"User '{_newUsername}' created successfully!";
+            _showSuccessModal = true;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // Edit
+    private void OpenEditDialog(User user)
+    {
+        _selectedUser = user;
+        _editPassword = "";
+        _editConfirmPassword = "";
+        _editingUser = new User
+        {
+            Id = user.Id,
+            Username = user.Username,
+            PasswordHash = user.PasswordHash,
+            Role = user.Role,
+            StudentId = user.StudentId,
+            FirstName = user.FirstName,
+            MiddleName = user.MiddleName,
+            Surname = user.Surname,
+            Suffix = user.Suffix,
+            Gender = user.Gender,
+            CivilStatus = user.CivilStatus,
+            Email = user.Email,
+            Address = user.Address,
+            MajorProfession = user.MajorProfession,
+            CreatedAt = user.CreatedAt
+        };
+        _editDialogOpen = true;
+    }
+
+    private void CloseEditDialog()
+    {
+        _editDialogOpen = false;
+    }
+
+    private Task HandleEditPasswordChanged(string password)
+    {
+        _editPassword = password;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleEditConfirmPasswordChanged(string password)
+    {
+        _editConfirmPassword = password;
+        return Task.CompletedTask;
+    }
+
+    private async Task SaveEditUser()
+    {
+        if (_editingUser is null) return;
+
+        // Validate password match if password is being changed
+        if (!string.IsNullOrWhiteSpace(_editPassword) && _editPassword != _editConfirmPassword)
+        {
+            Snackbar.Add("Passwords do not match.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            // If a new password was entered, hash it and update
+            if (!string.IsNullOrWhiteSpace(_editPassword))
+            {
+                await UserService.UpdateUserWithPasswordAsync(_editingUser, _editPassword);
+            }
+            else
+            {
+                await UserService.UpdateUserAsync(_editingUser);
+            }
+            _editDialogOpen = false;
+            _successMessage = $"User '{_editingUser.Username}' updated successfully!";
+            _showSuccessModal = true;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // Delete
+    private void OpenDeleteDialog(User user)
+    {
+        _selectedUser = user;
+        _deleteDialogOpen = true;
+    }
+
+    private void CloseDeleteDialog()
+    {
+        _deleteDialogOpen = false;
+    }
+
+    private async Task DeleteUser()
+    {
+        if (_selectedUser is null) return;
+
+        try
+        {
+            await UserService.DeleteUserAsync(_selectedUser.Id);
+            _deleteDialogOpen = false;
+            Snackbar.Add($"User '{_selectedUser.Username}' deleted.", Severity.Success);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // Success Modal
+    private Task HandleSuccessModalChanged(bool visible)
+    {
+        _showSuccessModal = visible;
+        return Task.CompletedTask;
+    }
+
+    private static string DisplayValue(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "N/A" : value;
+    }
+}

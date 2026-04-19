@@ -70,9 +70,9 @@ public class UserService : IUserService
             Suffix = request.Suffix.Trim(),
             Gender = request.Gender.Trim(),
             CivilStatus = request.CivilStatus.Trim(),
-            Email = request.Email.Trim(),
-            Address = request.Address.Trim(),
-            MajorProfession = request.MajorProfession.Trim()
+            Email = request.Role == UserRole.Admin ? string.Empty : request.Email.Trim(),
+            Address = request.Role == UserRole.Admin ? string.Empty : request.Address.Trim(),
+            MajorProfession = request.Role == UserRole.Admin ? string.Empty : request.MajorProfession.Trim()
         };
 
         return await _repository.AddAsync(user);
@@ -81,6 +81,37 @@ public class UserService : IUserService
     public async Task<User?> GetUserByIdAsync(int id)
     {
         return await _repository.GetByIdAsync(id);
+    }
+
+    public async Task<IEnumerable<User>> GetAllUsersAsync()
+    {
+        return await _repository.GetAllAsync();
+    }
+
+    public async Task UpdateUserAsync(User user)
+    {
+        await _repository.UpdateAsync(user);
+    }
+
+    public async Task UpdateUserWithPasswordAsync(User user, string newPassword)
+    {
+        user.PasswordHash = HashPassword(newPassword);
+        await _repository.UpdateAsync(user);
+    }
+
+    public async Task DeleteUserAsync(int id)
+    {
+        var user = await _repository.GetByIdAsync(id);
+        if (user is null)
+            throw new KeyNotFoundException($"User with ID {id} was not found.");
+
+        // If the user has a linked student, delete the student record too
+        if (user.StudentId.HasValue)
+        {
+            await _studentRepository.DeleteAsync(user.StudentId.Value);
+        }
+
+        await _repository.DeleteAsync(id);
     }
 
     private static string HashPassword(string password)

@@ -18,10 +18,10 @@
 {
     <RedirectToLogin />
 }
-else if (!_isInstructor)
+else if (!_isInstructor && !_isAdmin)
 {
     <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
-        Enrollment management is only available to instructors. Use `Enrollment Chart Table` from the sidebar for student records.
+        Enrollment management is only available to instructors or admins. Use `Enrollment Chart Table` from the sidebar for student records.
     </MudAlert>
 }
 else
@@ -114,6 +114,7 @@ else
     private bool _isEditing;
     private bool _isAuthenticated;
     private bool _isInstructor;
+    private bool _isAdmin;
     private Enrollment _editingEnrollment = new();
     private string? _loadError;
 
@@ -122,6 +123,7 @@ else
         var authState = await AuthProvider.GetAuthenticationStateAsync();
         _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
         _isInstructor = authState.User.IsInRole("Instructor");
+        _isAdmin = authState.User.IsInRole("Admin");
 
         if (_isAuthenticated)
         {
@@ -133,7 +135,7 @@ else
     {
         try
         {
-            if (_isInstructor)
+            if (_isInstructor || _isAdmin)
             {
                 _enrollments = (await EnrollmentService.GetAllEnrollmentsAsync()).ToList();
             }

@@ -3,34 +3,52 @@
 <MudNavMenu>
     <AuthorizeView>
         <Authorized>
-            <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Style="color: #E3F2FD;">
+            <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Style="color: #FFFFFF;">
                 Dashboard
             </MudNavLink>
 
-            @if (context.User.IsInRole("Instructor"))
+            @if (context.User.IsInRole("Admin"))
             {
-                <MudNavLink Href="/students" Icon="@Icons.Material.Filled.People" Style="color: #E3F2FD;">
+                <MudNavLink Href="/students" Icon="@Icons.Material.Filled.People" Style="color: #FFFFFF;">
                     Students
                 </MudNavLink>
-                <MudNavLink Href="/courses" Icon="@Icons.Material.Filled.MenuBook" Style="color: #E3F2FD;">
+                <MudNavLink Href="/courses" Icon="@Icons.Material.Filled.MenuBook" Style="color: #FFFFFF;">
                     Courses
                 </MudNavLink>
-                <MudNavLink Href="/enrollments" Icon="@Icons.Material.Filled.AppRegistration" Style="color: #E3F2FD;">
+                <MudNavLink Href="/enrollments" Icon="@Icons.Material.Filled.AppRegistration" Style="color: #FFFFFF;">
                     Enrollments
                 </MudNavLink>
-                <MudNavLink Href="/grades" Icon="@Icons.Material.Filled.Grade" Style="color: #E3F2FD;">
+                <MudNavLink Href="/grades" Icon="@Icons.Material.Filled.Grade" Style="color: #FFFFFF;">
+                    Grades
+                </MudNavLink>
+                <MudNavLink Href="/users" Icon="@Icons.Material.Filled.ManageAccounts" Style="color: #FFFFFF;">
+                    Users
+                </MudNavLink>
+            }
+            else if (context.User.IsInRole("Instructor"))
+            {
+                <MudNavLink Href="/students" Icon="@Icons.Material.Filled.People" Style="color: #FFFFFF;">
+                    Students
+                </MudNavLink>
+                <MudNavLink Href="/courses" Icon="@Icons.Material.Filled.MenuBook" Style="color: #FFFFFF;">
+                    Courses
+                </MudNavLink>
+                <MudNavLink Href="/enrollments" Icon="@Icons.Material.Filled.AppRegistration" Style="color: #FFFFFF;">
+                    Enrollments
+                </MudNavLink>
+                <MudNavLink Href="/grades" Icon="@Icons.Material.Filled.Grade" Style="color: #FFFFFF;">
                     Grades
                 </MudNavLink>
             }
             else if (context.User.IsInRole("Student"))
             {
-                <MudNavLink Href="/courses" Icon="@Icons.Material.Filled.MenuBook" Style="color: #E3F2FD;">
+                <MudNavLink Href="/courses" Icon="@Icons.Material.Filled.MenuBook" Style="color: #FFFFFF;">
                     Courses
                 </MudNavLink>
-                <MudNavLink Href="/enrollment-chart-table" Icon="@Icons.Material.Filled.TableChart" Style="color: #E3F2FD;">
+                <MudNavLink Href="/enrollment-chart-table" Icon="@Icons.Material.Filled.TableChart" Style="color: #FFFFFF;">
                     Enrollment Chart Table
                 </MudNavLink>
-                <MudNavLink Href="/my-grades" Icon="@Icons.Material.Filled.Grade" Style="color: #E3F2FD;">
+                <MudNavLink Href="/my-grades" Icon="@Icons.Material.Filled.Grade" Style="color: #FFFFFF;">
                     My Grade
                 </MudNavLink>
             }

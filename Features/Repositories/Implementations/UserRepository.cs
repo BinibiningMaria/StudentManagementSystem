@@ -68,7 +68,21 @@ public class UserRepository : IUserRepository
             throw new KeyNotFoundException($"User with ID {user.Id} was not found.");
         }
 
-        context.Entry(existingUser).CurrentValues.SetValues(user);
+        // Explicitly copy each property to avoid issues with navigation/computed properties
+        existingUser.Username = user.Username;
+        existingUser.PasswordHash = user.PasswordHash;
+        existingUser.Role = user.Role;
+        existingUser.StudentId = user.StudentId;
+        existingUser.FirstName = user.FirstName;
+        existingUser.MiddleName = user.MiddleName;
+        existingUser.Surname = user.Surname;
+        existingUser.Suffix = user.Suffix;
+        existingUser.Gender = user.Gender;
+        existingUser.CivilStatus = user.CivilStatus;
+        existingUser.Email = user.Email;
+        existingUser.Address = user.Address;
+        existingUser.MajorProfession = user.MajorProfession;
+
         await context.SaveChangesAsync();
     }
 
@@ -78,6 +92,31 @@ public class UserRepository : IUserRepository
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var user = await context.Users.FirstOrDefaultAsync(existingUser => existingUser.StudentId == studentId);
+        if (user is not null)
+        {
+            context.Users.Remove(user);
+            await context.SaveChangesAsync();
+        }
+    }
+
+    public async Task<IEnumerable<User>> GetAllAsync()
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        return await context.Users
+            .AsNoTracking()
+            .Include(u => u.Student)
+            .OrderByDescending(u => u.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task DeleteAsync(int id)
+    {
+        await using var scope = _scopeFactory.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var user = await context.Users.FirstOrDefaultAsync(u => u.Id == id);
         if (user is not null)
         {
             context.Users.Remove(user);

@@ -58,3 +58,28 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+/* Sidebar active nav link - make clicked item clearly visible */
+.mud-nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    border-left: 4px solid #FF9800 !important;
+    font-weight: 700 !important;
+}
+
+.mud-nav-link.active .mud-nav-link-text {
+    color: #FFFFFF !important;
+    font-weight: 700 !important;
+}
+
+.mud-nav-link.active .mud-icon-root {
+    color: #FF9800 !important;
+}
+
+/* Sidebar hover effect */
+.mud-nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.mud-nav-link:hover .mud-nav-link-text {
+    color: #FFFFFF !important;
+}
