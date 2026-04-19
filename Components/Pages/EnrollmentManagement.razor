@@ -1,0 +1,227 @@
+@page "/enrollments"
+@page "/enrollmentmanagement"
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using StudentManagementSystem.Features.Data.Models
+@using StudentManagementSystem.Features.Helpers
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject IEnrollmentService EnrollmentService
+@inject IStudentService StudentService
+@inject ICourseService CourseService
+@inject AuthenticationStateProvider AuthProvider
+@inject ISnackbar Snackbar
+
+<PageTitle>Enrollment Management</PageTitle>
+
+@if (!_isAuthenticated)
+{
+    <RedirectToLogin />
+}
+else if (!_isInstructor)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+        Enrollment management is only available to instructors. Use `Enrollment Chart Table` from the sidebar for student records.
+    </MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" Style="color: #1A237E; margin-bottom: 16px;">
+        Enrollment Management
+    </MudText>
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Style="margin-bottom: 16px;">
+            Enrollment data is temporarily unavailable. @_loadError
+        </MudAlert>
+    }
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add" Style="margin-bottom: 16px;">
+        Add Enrollment
+    </MudButton>
+
+    <MudTable Items="@_enrollments" Hover="true" Elevation="2" Style="background: white;">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6" Style="color: #1A237E;">Enrollments</MudText>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Student</MudTh>
+            <MudTh>Course</MudTh>
+            <MudTh>Semester</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@(context.Student?.FullName ?? "N/A")</MudTd>
+            <MudTd>@(context.Course?.CourseName ?? "N/A")</MudTd>
+            <MudTd>@context.Semester</MudTd>
+            <MudTd>@context.EnrollmentDate.ToShortDateString()</MudTd>
+            <MudTd>
+                <MudChip T="string" Color="@(context.Status == "Enrolled" ? Color.Success : Color.Warning)" Size="Size.Small">
+                    @context.Status
+                </MudChip>
+            </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteEnrollment(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Align="Align.Center" Style="color: #546E7A;">No enrollments found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    <MudDialog @bind-Visible="_dialogOpen">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">@(_isEditing ? "Edit Enrollment" : "Add Enrollment")</MudText>
+
+            <MudSelect T="int" @bind-Value="_editingEnrollment.StudentId" Label="Student" Variant="Variant.Outlined" Required>
+                @foreach (var student in _students)
+                {
+                    <MudSelectItem T="int" Value="@student.Id">@student.FullName (@student.StudentNumber)</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="int" @bind-Value="_editingEnrollment.CourseId" Label="Course" Variant="Variant.Outlined" Required Style="margin-top: 12px;">
+                @foreach (var course in _courses)
+                {
+                    <MudSelectItem T="int" Value="@course.Id">@course.CourseCode - @course.CourseName</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="string" @bind-Value="_editingEnrollment.Semester" Label="Semester" Variant="Variant.Outlined" Required Style="margin-top: 12px;">
+                <MudSelectItem T="string" Value="@("1st Semester")">1st Semester</MudSelectItem>
+                <MudSelectItem T="string" Value="@("2nd Semester")">2nd Semester</MudSelectItem>
+            </MudSelect>
+            <MudSelect T="string" @bind-Value="_editingEnrollment.Status" Label="Status" Variant="Variant.Outlined" Style="margin-top: 12px;">
+                <MudSelectItem T="string" Value="@("Enrolled")">Enrolled</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Dropped")">Dropped</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Completed")">Completed</MudSelectItem>
+            </MudSelect>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Color="Color.Primary" OnClick="SaveEnrollment">Save</MudButton>
+            <MudButton Color="Color.Default" OnClick="CloseDialog">Cancel</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private List<Enrollment> _enrollments = new();
+    private List<Student> _students = new();
+    private List<Course> _courses = new();
+    private bool _dialogOpen;
+    private bool _isEditing;
+    private bool _isAuthenticated;
+    private bool _isInstructor;
+    private Enrollment _editingEnrollment = new();
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _isInstructor = authState.User.IsInRole("Instructor");
+
+        if (_isAuthenticated)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            if (_isInstructor)
+            {
+                _enrollments = (await EnrollmentService.GetAllEnrollmentsAsync()).ToList();
+            }
+            else
+            {
+                var authState = await AuthProvider.GetAuthenticationStateAsync();
+                var studentIdClaim = authState.User.FindFirst("StudentId")?.Value;
+                if (int.TryParse(studentIdClaim, out var studentId))
+                {
+                    _enrollments = (await EnrollmentService.GetEnrollmentsByStudentAsync(studentId)).ToList();
+                }
+            }
+
+            _students = (await StudentService.GetAllStudentsAsync()).ToList();
+            _courses = (await CourseService.GetAllCoursesAsync()).ToList();
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            _enrollments = new();
+            _students = new();
+            _courses = new();
+            _loadError = ex.Message;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        _isEditing = false;
+        _editingEnrollment = new Enrollment { EnrollmentDate = DateTime.Now, Status = "Enrolled" };
+        _dialogOpen = true;
+    }
+
+    private void OpenEditDialog(Enrollment enrollment)
+    {
+        _isEditing = true;
+        _editingEnrollment = new Enrollment
+        {
+            Id = enrollment.Id,
+            StudentId = enrollment.StudentId,
+            CourseId = enrollment.CourseId,
+            Semester = enrollment.Semester,
+            EnrollmentDate = enrollment.EnrollmentDate,
+            Status = enrollment.Status
+        };
+        _dialogOpen = true;
+    }
+
+    private void CloseDialog()
+    {
+        _dialogOpen = false;
+    }
+
+    private async Task SaveEnrollment()
+    {
+        try
+        {
+            if (_isEditing)
+            {
+                await EnrollmentService.UpdateEnrollmentAsync(_editingEnrollment);
+                Snackbar.Add("Enrollment updated successfully.", Severity.Success);
+            }
+            else
+            {
+                await EnrollmentService.AddEnrollmentAsync(_editingEnrollment);
+                Snackbar.Add("Enrollment added successfully.", Severity.Success);
+            }
+
+            _dialogOpen = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteEnrollment(Enrollment enrollment)
+    {
+        try
+        {
+            await EnrollmentService.DeleteEnrollmentAsync(enrollment.Id);
+            Snackbar.Add("Enrollment deleted.", Severity.Success);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+}

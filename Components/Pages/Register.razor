@@ -1,0 +1,344 @@
+@page "/register"
+@layout StudentManagementSystem.Components.Layout.EmptyLayout
+
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject NavigationManager Navigation
+@inject IUserService UserService
+@inject ISnackbar Snackbar
+
+<PageTitle>Register</PageTitle>
+
+<MudPaper Elevation="4" Style="padding: 32px;">
+    <MudText Typo="Typo.h5" Style="color: #1A237E; margin-bottom: 8px; text-align: center;">Create Account</MudText>
+    <MudText Typo="Typo.body2" Style="color: #546E7A; text-align: center; margin-bottom: 24px;">
+        Step @_step of 4
+    </MudText>
+
+    @if (_step == 1)
+    {
+        <MudSelect T="UserRole?" Value="_selectedRole" ValueChanged="HandleRoleChanged" Label="Role" Variant="Variant.Outlined" Clearable="true">
+            <MudSelectItem T="UserRole?" Value="@UserRole.Student">Student</MudSelectItem>
+            <MudSelectItem T="UserRole?" Value="@UserRole.Instructor">Instructor</MudSelectItem>
+        </MudSelect>
+    }
+    else if (_step == 2)
+    {
+        <MudTextField @bind-Value="_firstName" Label="First Name" Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="_middleName" Label="Middle Name" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+        <MudTextField @bind-Value="_surname" Label="Surname" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+        <MudTextField @bind-Value="_suffix" Label="Suffix" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+        <MudSelect T="string" Value="_gender" ValueChanged="HandleGenderChanged" Label="Gender" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
+            @foreach (var gender in Genders)
+            {
+                <MudSelectItem T="string" Value="@gender">@gender</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="string" Value="_civilStatus" ValueChanged="HandleCivilStatusChanged" Label="Civil Status" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
+            @foreach (var civilStatus in CivilStatuses)
+            {
+                <MudSelectItem T="string" Value="@civilStatus">@civilStatus</MudSelectItem>
+            }
+        </MudSelect>
+    }
+    else if (_step == 3)
+    {
+        <MudTextField @bind-Value="_email" Label="Email" Variant="Variant.Outlined" />
+        <MudTextField @bind-Value="_address" Label="Address" Variant="Variant.Outlined" Lines="3" Style="margin-top: 12px;" />
+
+        @if (_selectedRole == UserRole.Student)
+        {
+            <MudSelect T="string" Value="_department" ValueChanged="HandleDepartmentChanged" Label="Department" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
+                @foreach (var department in Departments)
+                {
+                    <MudSelectItem T="string" Value="@department">@department</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="string" Value="_program" ValueChanged="HandleProgramChanged" Label="Program" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
+                @foreach (var program in Programs)
+                {
+                    <MudSelectItem T="string" Value="@program">@program</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="int?" Value="_yearLevel" ValueChanged="HandleYearLevelChanged" Label="Year Level" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
+                @foreach (var yearLevel in YearLevels)
+                {
+                    <MudSelectItem T="int?" Value="@yearLevel">@yearLevel</MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField @bind-Value="_instructorName" Label="Instructor (Optional)" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+        }
+        else
+        {
+            <MudSelect T="string" Value="_majorProfession" ValueChanged="HandleMajorProfessionChanged" Label="Major Profession" Variant="Variant.Outlined" Style="margin-top: 12px;" Clearable="true">
+                @foreach (var profession in MajorProfessions)
+                {
+                    <MudSelectItem T="string" Value="@profession">@profession</MudSelectItem>
+                }
+            </MudSelect>
+        }
+    }
+    else
+    {
+        <MudTextField @bind-Value="_username" Label="Username" Variant="Variant.Outlined" />
+        <div style="margin-top: 12px;">
+            <PasswordField Value="_password" ValueChanged="HandlePasswordChanged" Label="Password" Required="true" />
+        </div>
+        <div style="margin-top: 12px;">
+            <PasswordField Value="_confirmPassword" ValueChanged="HandleConfirmPasswordChanged" Label="Confirm Password" Required="true" />
+        </div>
+    }
+
+    <div style="display: flex; justify-content: space-between; gap: 12px; margin-top: 24px;">
+        @if (_step == 1)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Href="/login">
+                Back to Login
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextStep" Disabled="@(!CanMoveNext)">
+                Next
+            </MudButton>
+        }
+        else if (_step < 4)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="PreviousStep">
+                Previous
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="NextStep" Disabled="@(!CanMoveNext)">
+                Next
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="PreviousStep">
+                Previous
+            </MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="HandleRegister" Disabled="@(!CanCreate || _isLoading)">
+                @if (_isLoading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit" />
+                    <span style="margin-left: 8px;">Creating account...</span>
+                }
+                else
+                {
+                    <span>Create</span>
+                }
+            </MudButton>
+        }
+    </div>
+
+    <div style="text-align: center; margin-top: 16px;">
+        <MudText Typo="Typo.body2" Style="color: #546E7A;">
+            Already have an account? <MudLink Href="/login" Color="Color.Primary">Sign In</MudLink>
+        </MudText>
+    </div>
+</MudPaper>
+
+<FloatingSuccessModal Visible="_showSuccessModal" VisibleChanged="HandleSuccessModalChanged" Message="_successMessage" />
+
+@code {
+    private int _step = 1;
+    private UserRole? _selectedRole;
+    private string _firstName = "";
+    private string _middleName = "";
+    private string _surname = "";
+    private string _suffix = "";
+    private string _gender = "";
+    private string _civilStatus = "";
+    private string _email = "";
+    private string _address = "";
+    private string _department = "";
+    private string _program = "";
+    private int? _yearLevel;
+    private string _instructorName = "";
+    private string _majorProfession = "";
+    private string _username = "";
+    private string _password = "";
+    private string _confirmPassword = "";
+    private bool _isLoading;
+    private bool _showSuccessModal;
+    private string _successMessage = "";
+
+    private static readonly string[] Genders = ["Male", "Female"];
+    private static readonly string[] CivilStatuses = ["Single", "Married", "Widowed", "Divorced", "Separated"];
+    private static readonly string[] Departments = ["CCS", "CBA", "CTED", "SCJE", "CAFSOE", "SHS"];
+    private static readonly string[] Programs =
+    [
+        "Computer Science",
+        "Information System",
+        "Information Technology",
+        "Cybersecurity",
+        "Computer Engineer"
+    ];
+    private static readonly int[] YearLevels = [1, 2, 3, 4];
+    private static readonly string[] MajorProfessions =
+    [
+        "Bachelor of Science in Computer Science (BS CS)",
+        "Bachelor of Science in Information Technology (BS IT)",
+        "Bachelor of Science in Computer Engineering (BS CE)",
+        "Data Science (BS DS)",
+        "Cybersecurity/Information Security",
+        "Information Systems (BS IS)",
+        "Entertainment and Media Computing (BS EMC)"
+    ];
+
+    private bool CanMoveNext => _step switch
+    {
+        1 => _selectedRole.HasValue,
+        2 => !string.IsNullOrWhiteSpace(_firstName)
+            && !string.IsNullOrWhiteSpace(_surname)
+            && !string.IsNullOrWhiteSpace(_gender)
+            && !string.IsNullOrWhiteSpace(_civilStatus),
+        3 when _selectedRole == UserRole.Student => !string.IsNullOrWhiteSpace(_email)
+            && !string.IsNullOrWhiteSpace(_address)
+            && !string.IsNullOrWhiteSpace(_department)
+            && !string.IsNullOrWhiteSpace(_program)
+            && _yearLevel.HasValue,
+        3 when _selectedRole == UserRole.Instructor => !string.IsNullOrWhiteSpace(_email)
+            && !string.IsNullOrWhiteSpace(_address)
+            && !string.IsNullOrWhiteSpace(_majorProfession),
+        _ => false
+    };
+
+    private bool CanCreate => !string.IsNullOrWhiteSpace(_username)
+        && !string.IsNullOrWhiteSpace(_password)
+        && _password == _confirmPassword;
+
+    private Task HandleRoleChanged(UserRole? role)
+    {
+        _selectedRole = role;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleGenderChanged(string gender)
+    {
+        _gender = gender;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleCivilStatusChanged(string civilStatus)
+    {
+        _civilStatus = civilStatus;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleDepartmentChanged(string department)
+    {
+        _department = department;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleProgramChanged(string program)
+    {
+        _program = program;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleYearLevelChanged(int? yearLevel)
+    {
+        _yearLevel = yearLevel;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleMajorProfessionChanged(string profession)
+    {
+        _majorProfession = profession;
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePasswordChanged(string password)
+    {
+        _password = password;
+        return Task.CompletedTask;
+    }
+
+    private Task HandleConfirmPasswordChanged(string password)
+    {
+        _confirmPassword = password;
+        return Task.CompletedTask;
+    }
+
+    private void NextStep()
+    {
+        if (_step < 4 && CanMoveNext)
+        {
+            _step++;
+        }
+    }
+
+    private void PreviousStep()
+    {
+        if (_step > 1)
+        {
+            _step--;
+        }
+    }
+
+    private async Task HandleRegister()
+    {
+        if (!_selectedRole.HasValue || !CanCreate)
+        {
+            Snackbar.Add("Please complete the registration form before creating the account.", Severity.Warning);
+            return;
+        }
+
+        if (_password != _confirmPassword)
+        {
+            Snackbar.Add("Passwords do not match.", Severity.Warning);
+            return;
+        }
+
+        _isLoading = true;
+
+        try
+        {
+            await UserService.RegisterAsync(new RegisterRequest
+            {
+                Role = _selectedRole.Value,
+                FirstName = _firstName,
+                MiddleName = _middleName,
+                Surname = _surname,
+                Suffix = _suffix,
+                Gender = _gender,
+                CivilStatus = _civilStatus,
+                Email = _email,
+                Address = _address,
+                Department = _department,
+                Program = _program,
+                YearLevel = _yearLevel,
+                InstructorName = _instructorName,
+                MajorProfession = _majorProfession,
+                Username = _username,
+                Password = _password
+            });
+
+            _successMessage = _selectedRole == UserRole.Student
+                ? $"Welcome {_firstName}!"
+                : $"Welcome {PersonNameHelper.BuildInstructorHonorific(_gender, _civilStatus)} {_surname}!";
+            _showSuccessModal = true;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Registration failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private Task HandleSuccessModalChanged(bool visible)
+    {
+        _showSuccessModal = visible;
+        if (!visible)
+        {
+            Navigation.NavigateTo("/login", replace: true);
+        }
+
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,330 @@
+﻿@page "/students"
+@page "/studentmanagement"
+
+@using StudentManagementSystem.Features.Data.Models
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject AuthenticationStateProvider AuthProvider
+@inject IStudentService StudentService
+@inject ISnackbar Snackbar
+
+<PageTitle>Student Management</PageTitle>
+
+@if (!_isAuthenticated)
+{
+    <RedirectToLogin />
+}
+else if (!_isInstructor)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+        Instructor access is required to manage students.
+    </MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" Style="color: #1A237E; margin-bottom: 16px;">Student Management</MudText>
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Style="margin-bottom: 16px;">
+            Student data is temporarily unavailable. @_loadError
+        </MudAlert>
+    }
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add" Style="margin-bottom: 16px;">
+        Add Student
+    </MudButton>
+
+    <MudTable Items="@_students" Hover="true" Elevation="2" Dense="true" Style="background: white;">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6" Style="color: #1A237E;">Students</MudText>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Role</MudTh>
+            <MudTh>First Name</MudTh>
+            <MudTh>Middle Name</MudTh>
+            <MudTh>Surname</MudTh>
+            <MudTh>Suffix</MudTh>
+            <MudTh>Gender</MudTh>
+            <MudTh>Civil Status</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Address</MudTh>
+            <MudTh>Department</MudTh>
+            <MudTh>Program</MudTh>
+            <MudTh>Year Level</MudTh>
+            <MudTh>Instructor</MudTh>
+            <MudTh>Username</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>Student</MudTd>
+            <MudTd>@context.FirstName</MudTd>
+            <MudTd>@context.MiddleName</MudTd>
+            <MudTd>@context.Surname</MudTd>
+            <MudTd>@context.Suffix</MudTd>
+            <MudTd>@context.Gender</MudTd>
+            <MudTd>@context.CivilStatus</MudTd>
+            <MudTd>@context.Email</MudTd>
+            <MudTd>@context.Address</MudTd>
+            <MudTd>@context.Department</MudTd>
+            <MudTd>@context.Program</MudTd>
+            <MudTd>@context.YearLevel</MudTd>
+            <MudTd>@context.InstructorName</MudTd>
+            <MudTd>@(context.User?.Username ?? "Not linked")</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" OnClick="@(() => OpenViewDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Align="Align.Center" Style="color: #546E7A;">No students found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    <MudDialog @bind-Visible="_dialogOpen">
+        <DialogContent>
+            @if (_dialogMode == DialogMode.View && _selectedStudent is not null)
+            {
+                <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">Student Details</MudText>
+                <MudText><strong>Full Name:</strong> @_selectedStudent.FullName</MudText>
+                <MudText><strong>Gender:</strong> @_selectedStudent.Gender</MudText>
+                <MudText><strong>Civil Status:</strong> @_selectedStudent.CivilStatus</MudText>
+                <MudText><strong>Email:</strong> @_selectedStudent.Email</MudText>
+                <MudText><strong>Address:</strong> @_selectedStudent.Address</MudText>
+                <MudText><strong>Department:</strong> @_selectedStudent.Department</MudText>
+                <MudText><strong>Program:</strong> @_selectedStudent.Program</MudText>
+                <MudText><strong>Year Level:</strong> @_selectedStudent.YearLevel</MudText>
+                <MudText><strong>Instructor:</strong> @DisplayValue(_selectedStudent.InstructorName)</MudText>
+                <MudText><strong>Username:</strong> @(_selectedStudent.User?.Username ?? "Not linked")</MudText>
+                <MudText><strong>Student Number:</strong> @_selectedStudent.StudentNumber</MudText>
+            }
+            else if (_dialogMode == DialogMode.Delete && _selectedStudent is not null)
+            {
+                <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">Delete Student</MudText>
+                <MudText>Are you sure you want to delete @_selectedStudent.FullName?</MudText>
+            }
+            else
+            {
+                <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">@(_dialogMode == DialogMode.Edit ? "Edit Student" : "Add Student")</MudText>
+
+                <MudTextField @bind-Value="_editingStudent.FirstName" Label="First Name" Variant="Variant.Outlined" Required />
+                <MudTextField @bind-Value="_editingStudent.MiddleName" Label="Middle Name" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+                <MudTextField @bind-Value="_editingStudent.Surname" Label="Surname" Variant="Variant.Outlined" Required Style="margin-top: 12px;" />
+                <MudTextField @bind-Value="_editingStudent.Suffix" Label="Suffix" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+                <MudSelect T="string" @bind-Value="_editingStudent.Gender" Label="Gender" Variant="Variant.Outlined" Style="margin-top: 12px;">
+                    <MudSelectItem T="string" Value="@("Male")">Male</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Female")">Female</MudSelectItem>
+                </MudSelect>
+                <MudSelect T="string" @bind-Value="_editingStudent.CivilStatus" Label="Civil Status" Variant="Variant.Outlined" Style="margin-top: 12px;">
+                    <MudSelectItem T="string" Value="@("Single")">Single</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Married")">Married</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Widowed")">Widowed</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Divorced")">Divorced</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Separated")">Separated</MudSelectItem>
+                </MudSelect>
+                <MudTextField @bind-Value="_editingStudent.Email" Label="Email" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+                <MudTextField @bind-Value="_editingStudent.Address" Label="Address" Variant="Variant.Outlined" Lines="3" Style="margin-top: 12px;" />
+                <MudSelect T="string" @bind-Value="_editingStudent.Department" Label="Department" Variant="Variant.Outlined" Style="margin-top: 12px;">
+                    @foreach (var department in _departments)
+                    {
+                        <MudSelectItem T="string" Value="@department">@department</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="string" @bind-Value="_editingStudent.Program" Label="Program" Variant="Variant.Outlined" Style="margin-top: 12px;">
+                    @foreach (var program in _programs)
+                    {
+                        <MudSelectItem T="string" Value="@program">@program</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudNumericField T="int" @bind-Value="_editingStudent.YearLevel" Label="Year Level" Variant="Variant.Outlined" Min="1" Max="4" Style="margin-top: 12px;" />
+                <MudTextField @bind-Value="_editingStudent.InstructorName" Label="Instructor" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+            }
+        </DialogContent>
+        <DialogActions>
+            @if (_dialogMode == DialogMode.View)
+            {
+                <MudButton Color="Color.Primary" OnClick="CloseDialog">Close</MudButton>
+            }
+            else if (_dialogMode == DialogMode.Delete)
+            {
+                <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="DeleteSelectedStudent">Delete</MudButton>
+                <MudButton Color="Color.Default" OnClick="CloseDialog">Cancel</MudButton>
+            }
+            else
+            {
+                <MudButton Color="Color.Primary" OnClick="SaveStudent">Save</MudButton>
+                <MudButton Color="Color.Default" OnClick="CloseDialog">Cancel</MudButton>
+            }
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private enum DialogMode
+    {
+        Add,
+        Edit,
+        View,
+        Delete
+    }
+
+    private readonly string[] _departments = ["CCS", "CBA", "CTED", "SCJE", "CAFSOE", "SHS"];
+    private readonly string[] _programs =
+    [
+        "Computer Science",
+        "Information System",
+        "Information Technology",
+        "Cybersecurity",
+        "Computer Engineer"
+    ];
+
+    private List<Student> _students = new();
+    private bool _dialogOpen;
+    private DialogMode _dialogMode = DialogMode.Add;
+    private Student _editingStudent = new();
+    private Student? _selectedStudent;
+    private bool _isAuthenticated;
+    private bool _isInstructor;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _isInstructor = authState.User.IsInRole("Instructor");
+
+        if (_isAuthenticated && _isInstructor)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            _students = (await StudentService.GetAllStudentsAsync()).OrderBy(student => student.Surname).ThenBy(student => student.FirstName).ToList();
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            _students = new();
+            _loadError = ex.Message;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        _dialogMode = DialogMode.Add;
+        _editingStudent = new Student();
+        _selectedStudent = null;
+        _dialogOpen = true;
+    }
+
+    private void OpenEditDialog(Student student)
+    {
+        _dialogMode = DialogMode.Edit;
+        _selectedStudent = student;
+        _editingStudent = new Student
+        {
+            Id = student.Id,
+            StudentNumber = student.StudentNumber,
+            FullName = student.FullName,
+            FirstName = student.FirstName,
+            MiddleName = student.MiddleName,
+            Surname = student.Surname,
+            Suffix = student.Suffix,
+            Gender = student.Gender,
+            CivilStatus = student.CivilStatus,
+            Email = student.Email,
+            Address = student.Address,
+            Department = student.Department,
+            Program = student.Program,
+            YearLevel = student.YearLevel,
+            InstructorName = student.InstructorName,
+            CourseId = student.CourseId,
+            CreatedAt = student.CreatedAt
+        };
+        _dialogOpen = true;
+    }
+
+    private void OpenViewDialog(Student student)
+    {
+        _dialogMode = DialogMode.View;
+        _selectedStudent = student;
+        _dialogOpen = true;
+    }
+
+    private void OpenDeleteDialog(Student student)
+    {
+        _dialogMode = DialogMode.Delete;
+        _selectedStudent = student;
+        _dialogOpen = true;
+    }
+
+    private void CloseDialog()
+    {
+        _dialogOpen = false;
+    }
+
+    private async Task SaveStudent()
+    {
+        try
+        {
+            _editingStudent.FullName = PersonNameHelper.BuildFullName(
+                _editingStudent.FirstName,
+                _editingStudent.MiddleName,
+                _editingStudent.Surname,
+                _editingStudent.Suffix);
+
+            if (string.IsNullOrWhiteSpace(_editingStudent.StudentNumber))
+            {
+                _editingStudent.StudentNumber = $"STU-{DateTime.UtcNow:yyyyMMddHHmmssfff}";
+            }
+
+            if (_dialogMode == DialogMode.Edit)
+            {
+                await StudentService.UpdateStudentAsync(_editingStudent);
+                Snackbar.Add("Student updated successfully.", Severity.Success);
+            }
+            else
+            {
+                await StudentService.AddStudentAsync(_editingStudent);
+                Snackbar.Add("Student added successfully.", Severity.Success);
+            }
+
+            _dialogOpen = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteSelectedStudent()
+    {
+        if (_selectedStudent is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await StudentService.DeleteStudentAsync(_selectedStudent.Id);
+            Snackbar.Add("Student deleted.", Severity.Success);
+            _dialogOpen = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private static string DisplayValue(string value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? "N/A" : value;
+    }
+}

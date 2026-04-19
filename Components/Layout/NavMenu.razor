@@ -1,0 +1,44 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+<MudNavMenu>
+    <AuthorizeView>
+        <Authorized>
+            <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard" Style="color: #E3F2FD;">
+                Dashboard
+            </MudNavLink>
+
+            @if (context.User.IsInRole("Instructor"))
+            {
+                <MudNavLink Href="/students" Icon="@Icons.Material.Filled.People" Style="color: #E3F2FD;">
+                    Students
+                </MudNavLink>
+                <MudNavLink Href="/courses" Icon="@Icons.Material.Filled.MenuBook" Style="color: #E3F2FD;">
+                    Courses
+                </MudNavLink>
+                <MudNavLink Href="/enrollments" Icon="@Icons.Material.Filled.AppRegistration" Style="color: #E3F2FD;">
+                    Enrollments
+                </MudNavLink>
+                <MudNavLink Href="/grades" Icon="@Icons.Material.Filled.Grade" Style="color: #E3F2FD;">
+                    Grades
+                </MudNavLink>
+            }
+            else if (context.User.IsInRole("Student"))
+            {
+                <MudNavLink Href="/courses" Icon="@Icons.Material.Filled.MenuBook" Style="color: #E3F2FD;">
+                    Courses
+                </MudNavLink>
+                <MudNavLink Href="/enrollment-chart-table" Icon="@Icons.Material.Filled.TableChart" Style="color: #E3F2FD;">
+                    Enrollment Chart Table
+                </MudNavLink>
+                <MudNavLink Href="/my-grades" Icon="@Icons.Material.Filled.Grade" Style="color: #E3F2FD;">
+                    My Grade
+                </MudNavLink>
+            }
+
+            <MudNavLink Href="/logout" Icon="@Icons.Material.Filled.Logout" Style="color: #FF9800;">
+                Logout
+            </MudNavLink>
+        </Authorized>
+        <NotAuthorized />
+    </AuthorizeView>
+</MudNavMenu>

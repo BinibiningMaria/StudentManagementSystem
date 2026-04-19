@@ -1,0 +1,25 @@
+@page "/logout"
+@using StudentManagementSystem.Features.Helpers
+
+@inject NavigationManager Navigation
+@inject CustomAuthenticationStateProvider AuthProvider
+
+<PageTitle>Logout</PageTitle>
+
+@code {
+    private bool _redirectPending;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await AuthProvider.MarkUserAsLoggedOut();
+        _redirectPending = true;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && _redirectPending)
+        {
+            Navigation.NavigateTo("/", replace: true);
+        }
+    }
+}

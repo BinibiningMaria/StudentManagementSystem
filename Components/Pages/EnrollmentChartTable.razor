@@ -1,0 +1,111 @@
+@page "/enrollment-chart-table"
+
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject AuthenticationStateProvider AuthProvider
+@inject IEnrollmentService EnrollmentService
+
+<PageTitle>Enrollment Chart Table</PageTitle>
+
+@if (!_isAuthenticated)
+{
+    <RedirectToLogin />
+}
+else if (!_isStudent)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+        Student access is required to view this page.
+    </MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" Style="color: #1A237E; margin-bottom: 16px;">Enrollment Chart Table</MudText>
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Style="margin-bottom: 16px;">
+            Enrollment data is temporarily unavailable. @_loadError
+        </MudAlert>
+    }
+
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px;">
+        <MudPaper Elevation="2" Style="padding: 16px; min-width: 180px;">
+            <MudText Typo="Typo.subtitle2" Style="color: #546E7A;">1st Semester</MudText>
+            <MudText Typo="Typo.h5" Style="color: #1A237E;">@_firstSemesterCount</MudText>
+        </MudPaper>
+        <MudPaper Elevation="2" Style="padding: 16px; min-width: 180px;">
+            <MudText Typo="Typo.subtitle2" Style="color: #546E7A;">2nd Semester</MudText>
+            <MudText Typo="Typo.h5" Style="color: #1A237E;">@_secondSemesterCount</MudText>
+        </MudPaper>
+        <MudPaper Elevation="2" Style="padding: 16px; min-width: 180px;">
+            <MudText Typo="Typo.subtitle2" Style="color: #546E7A;">Total Enrollments</MudText>
+            <MudText Typo="Typo.h5" Style="color: #1A237E;">@_enrollments.Count</MudText>
+        </MudPaper>
+    </div>
+
+    <MudTable Items="@_enrollments" Hover="true" Elevation="2" Style="background: white;">
+        <HeaderContent>
+            <MudTh>Course</MudTh>
+            <MudTh>Semester</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Status</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@(context.Course?.CourseName ?? "N/A")</MudTd>
+            <MudTd>@context.Semester</MudTd>
+            <MudTd>@context.EnrollmentDate.ToShortDateString()</MudTd>
+            <MudTd>
+                <MudChip T="string" Color="@(context.Status == "Enrolled" ? Color.Success : Color.Warning)" Size="Size.Small">
+                    @context.Status
+                </MudChip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Align="Align.Center" Style="color: #546E7A;">No enrollments found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+}
+
+@code {
+    private List<Enrollment> _enrollments = new();
+    private bool _isAuthenticated;
+    private bool _isStudent;
+    private int _firstSemesterCount;
+    private int _secondSemesterCount;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _isStudent = authState.User.IsInRole("Student");
+
+        if (_isAuthenticated && _isStudent)
+        {
+            await LoadData(authState);
+        }
+    }
+
+    private async Task LoadData(AuthenticationState authState)
+    {
+        try
+        {
+            var studentIdClaim = authState.User.FindFirst("StudentId")?.Value;
+            if (int.TryParse(studentIdClaim, out var studentId))
+            {
+                _enrollments = (await EnrollmentService.GetEnrollmentsByStudentAsync(studentId)).ToList();
+            }
+
+            _firstSemesterCount = _enrollments.Count(enrollment => enrollment.Semester.Contains("1st", StringComparison.OrdinalIgnoreCase));
+            _secondSemesterCount = _enrollments.Count(enrollment => enrollment.Semester.Contains("2nd", StringComparison.OrdinalIgnoreCase));
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            _enrollments = new();
+            _firstSemesterCount = 0;
+            _secondSemesterCount = 0;
+            _loadError = ex.Message;
+        }
+    }
+}

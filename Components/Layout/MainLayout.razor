@@ -1,0 +1,53 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudDrawer Elevation="2" Open="@_drawerOpen" Variant="DrawerVariant.Persistent">
+        <div style="background: #1A237E; height: 100%; color: white;">
+            <div style="padding: 20px 16px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.15);">
+                <MudText Typo="Typo.h6" Style="color: white;">Student Management</MudText>
+                <MudText Typo="Typo.body2" Style="color: #E3F2FD;">System</MudText>
+            </div>
+            <NavMenu />
+        </div>
+    </MudDrawer>
+
+    <MudMainContent Style="background: #F8F9FA;">
+        <MudAppBar Elevation="1" Style="background: #1A237E; color: white;">
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" OnClick="ToggleDrawer" />
+            <MudText Typo="Typo.h6" Style="color: white;">Student Management System</MudText>
+        </MudAppBar>
+        <div style="padding: 24px;">
+            @Body
+        </div>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+    private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#1A237E",
+            Secondary = "#E3F2FD",
+            AppbarText = "#FFFFFF",
+            Background = "#F8F9FA",
+            Surface = "#FFFFFF",
+            TextPrimary = "#1A237E",
+            TextSecondary = "#546E7A",
+            AppbarBackground = "#1A237E",
+            DrawerBackground = "#1A237E",
+            DrawerText = "#FFFFFF",
+        }
+    };
+
+    private void ToggleDrawer()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+}

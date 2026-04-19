@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="_theme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<div style="background: #F8F9FA; min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 480px; padding: 24px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+            <MudText Typo="Typo.h4" Style="color: #1A237E; font-weight: 700;">Student Management</MudText>
+            <MudText Typo="Typo.body1" Style="color: #546E7A;">System</MudText>
+        </div>
+        @Body
+    </div>
+</div>
+
+@code {
+    private MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#1A237E",
+            Secondary = "#E3F2FD",
+            Background = "#F8F9FA",
+            Surface = "#FFFFFF",
+            TextPrimary = "#1A237E",
+            TextSecondary = "#546E7A",
+        }
+    };
+}

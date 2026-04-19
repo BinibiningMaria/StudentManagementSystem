@@ -1,0 +1,112 @@
+@page "/login"
+@layout StudentManagementSystem.Components.Layout.EmptyLayout
+
+@using Microsoft.AspNetCore.WebUtilities
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject NavigationManager Navigation
+@inject CustomAuthenticationStateProvider AuthProvider
+@inject IUserService UserService
+@inject ISnackbar Snackbar
+
+<PageTitle>Login</PageTitle>
+
+<MudPaper Elevation="4" Style="padding: 32px;">
+    <MudText Typo="Typo.h5" Style="color: #1A237E; margin-bottom: 24px; text-align: center;">Sign In</MudText>
+
+    <MudSelect T="UserRole?" Value="_selectedRole" ValueChanged="HandleRoleChanged" Label="Role" Variant="Variant.Outlined" Clearable="true">
+        <MudSelectItem T="UserRole?" Value="@UserRole.Student">Student</MudSelectItem>
+        <MudSelectItem T="UserRole?" Value="@UserRole.Instructor">Instructor</MudSelectItem>
+    </MudSelect>
+
+    <MudTextField @bind-Value="_username" Label="Username" Variant="Variant.Outlined"
+                  AdornmentIcon="@Icons.Material.Filled.Person" Adornment="Adornment.Start" Style="margin-top: 16px;" />
+
+    <PasswordField Value="_password" ValueChanged="HandlePasswordChanged" Label="Password" Required="true" />
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
+               OnClick="HandleLogin" Style="margin-top: 24px;" Disabled="@(!CanLogin || _isLoading)">
+        @if (_isLoading)
+        {
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit" />
+            <span style="margin-left: 8px;">Signing in...</span>
+        }
+        else
+        {
+            <span>Sign In</span>
+        }
+    </MudButton>
+
+    <div style="text-align: center; margin-top: 16px;">
+        <MudText Typo="Typo.body2" Style="color: #546E7A;">
+            Don't have an account? <MudLink Href="/register" Color="Color.Primary">Register</MudLink>
+        </MudText>
+    </div>
+</MudPaper>
+
+@code {
+    private UserRole? _selectedRole;
+    private string _username = "";
+    private string _password = "";
+    private bool _isLoading;
+    private string _targetUrl = "/dashboard";
+    private bool CanLogin => _selectedRole.HasValue
+        && !string.IsNullOrWhiteSpace(_username)
+        && !string.IsNullOrWhiteSpace(_password);
+
+    protected override void OnInitialized()
+    {
+        var absoluteUri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        if (QueryHelpers.ParseQuery(absoluteUri.Query).TryGetValue("returnUrl", out var returnUrl)
+            && !string.IsNullOrWhiteSpace(returnUrl))
+        {
+            _targetUrl = returnUrl.ToString();
+        }
+    }
+
+    private Task HandleRoleChanged(UserRole? role)
+    {
+        _selectedRole = role;
+        return Task.CompletedTask;
+    }
+
+    private Task HandlePasswordChanged(string password)
+    {
+        _password = password;
+        return Task.CompletedTask;
+    }
+
+    private async Task HandleLogin()
+    {
+        if (!CanLogin || !_selectedRole.HasValue)
+        {
+            Snackbar.Add("Please select a role and complete all login fields.", Severity.Warning);
+            return;
+        }
+
+        _isLoading = true;
+
+        try
+        {
+            var user = await UserService.ValidateLoginAsync(_username, _password, _selectedRole.Value);
+            if (user is not null)
+            {
+                await AuthProvider.MarkUserAsAuthenticated(user);
+                Snackbar.Add("Login successful!", Severity.Success);
+                Navigation.NavigateTo(_targetUrl, replace: true);
+            }
+            else
+            {
+                Snackbar.Add("Invalid username or password.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Login failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

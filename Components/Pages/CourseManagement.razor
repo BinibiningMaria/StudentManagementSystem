@@ -1,0 +1,243 @@
+﻿@page "/courses"
+@page "/coursemanagement"
+
+@using StudentManagementSystem.Features.Data.Models
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject AuthenticationStateProvider AuthProvider
+@inject ICourseService CourseService
+@inject ISnackbar Snackbar
+
+<PageTitle>Course Management</PageTitle>
+
+@if (!_isAuthenticated)
+{
+    <RedirectToLogin />
+}
+else
+{
+    <MudText Typo="Typo.h4" Style="color: #1A237E; margin-bottom: 16px;">Courses</MudText>
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Style="margin-bottom: 16px;">
+            Course data is temporarily unavailable. @_loadError
+        </MudAlert>
+    }
+
+    @if (_isInstructor)
+    {
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add" Style="margin-bottom: 16px;">
+            Add Course
+        </MudButton>
+    }
+
+    <MudTable Items="@_courses" Hover="true" Elevation="2" Style="background: white;">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6" Style="color: #1A237E;">Courses</MudText>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Code</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Units</MudTh>
+            @if (_isInstructor)
+            {
+                <MudTh>Actions</MudTh>
+            }
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@context.CourseCode</MudTd>
+            <MudTd>@context.CourseName</MudTd>
+            <MudTd>@context.Description</MudTd>
+            <MudTd>@context.Units</MudTd>
+            @if (_isInstructor)
+            {
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Visibility" Color="Color.Info" OnClick="@(() => OpenViewDialog(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => OpenDeleteDialog(context))" />
+                </MudTd>
+            }
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Align="Align.Center" Style="color: #546E7A;">No courses found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    @if (_isInstructor)
+    {
+        <MudDialog @bind-Visible="_dialogOpen">
+            <DialogContent>
+                @if (_dialogMode == DialogMode.View && _selectedCourse is not null)
+                {
+                    <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">Course Details</MudText>
+                    <MudText><strong>Code:</strong> @_selectedCourse.CourseCode</MudText>
+                    <MudText><strong>Name:</strong> @_selectedCourse.CourseName</MudText>
+                    <MudText><strong>Description:</strong> @_selectedCourse.Description</MudText>
+                    <MudText><strong>Units:</strong> @_selectedCourse.Units</MudText>
+                }
+                else if (_dialogMode == DialogMode.Delete && _selectedCourse is not null)
+                {
+                    <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">Delete Course</MudText>
+                    <MudText>Are you sure you want to delete @_selectedCourse.CourseName?</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">@(_dialogMode == DialogMode.Edit ? "Edit Course" : "Add Course")</MudText>
+                    <MudTextField @bind-Value="_editingCourse.CourseCode" Label="Course Code" Variant="Variant.Outlined" Required />
+                    <MudTextField @bind-Value="_editingCourse.CourseName" Label="Course Name" Variant="Variant.Outlined" Required Style="margin-top: 12px;" />
+                    <MudTextField @bind-Value="_editingCourse.Description" Label="Description" Variant="Variant.Outlined" Lines="3" Style="margin-top: 12px;" />
+                    <MudNumericField T="int" @bind-Value="_editingCourse.Units" Label="Units" Variant="Variant.Outlined" Min="1" Max="6" Style="margin-top: 12px;" />
+                }
+            </DialogContent>
+            <DialogActions>
+                @if (_dialogMode == DialogMode.View)
+                {
+                    <MudButton Color="Color.Primary" OnClick="CloseDialog">Close</MudButton>
+                }
+                else if (_dialogMode == DialogMode.Delete)
+                {
+                    <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="DeleteSelectedCourse">Delete</MudButton>
+                    <MudButton Color="Color.Default" OnClick="CloseDialog">Cancel</MudButton>
+                }
+                else
+                {
+                    <MudButton Color="Color.Primary" OnClick="SaveCourse">Save</MudButton>
+                    <MudButton Color="Color.Default" OnClick="CloseDialog">Cancel</MudButton>
+                }
+            </DialogActions>
+        </MudDialog>
+    }
+}
+
+@code {
+    private enum DialogMode
+    {
+        Add,
+        Edit,
+        View,
+        Delete
+    }
+
+    private List<Course> _courses = new();
+    private bool _dialogOpen;
+    private DialogMode _dialogMode = DialogMode.Add;
+    private Course _editingCourse = new();
+    private Course? _selectedCourse;
+    private bool _isAuthenticated;
+    private bool _isInstructor;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _isInstructor = authState.User.IsInRole("Instructor");
+
+        if (_isAuthenticated)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            _courses = (await CourseService.GetAllCoursesAsync()).OrderBy(course => course.CourseCode).ToList();
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            _courses = new();
+            _loadError = ex.Message;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        _dialogMode = DialogMode.Add;
+        _editingCourse = new Course();
+        _selectedCourse = null;
+        _dialogOpen = true;
+    }
+
+    private void OpenEditDialog(Course course)
+    {
+        _dialogMode = DialogMode.Edit;
+        _selectedCourse = course;
+        _editingCourse = new Course
+        {
+            Id = course.Id,
+            CourseCode = course.CourseCode,
+            CourseName = course.CourseName,
+            Description = course.Description,
+            Units = course.Units
+        };
+        _dialogOpen = true;
+    }
+
+    private void OpenViewDialog(Course course)
+    {
+        _dialogMode = DialogMode.View;
+        _selectedCourse = course;
+        _dialogOpen = true;
+    }
+
+    private void OpenDeleteDialog(Course course)
+    {
+        _dialogMode = DialogMode.Delete;
+        _selectedCourse = course;
+        _dialogOpen = true;
+    }
+
+    private void CloseDialog()
+    {
+        _dialogOpen = false;
+    }
+
+    private async Task SaveCourse()
+    {
+        try
+        {
+            if (_dialogMode == DialogMode.Edit)
+            {
+                await CourseService.UpdateCourseAsync(_editingCourse);
+                Snackbar.Add("Course updated successfully.", Severity.Success);
+            }
+            else
+            {
+                await CourseService.AddCourseAsync(_editingCourse);
+                Snackbar.Add("Course added successfully.", Severity.Success);
+            }
+
+            _dialogOpen = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteSelectedCourse()
+    {
+        if (_selectedCourse is null)
+        {
+            return;
+        }
+
+        try
+        {
+            await CourseService.DeleteCourseAsync(_selectedCourse.Id);
+            Snackbar.Add("Course deleted.", Severity.Success);
+            _dialogOpen = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+}

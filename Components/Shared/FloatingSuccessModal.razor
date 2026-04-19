@@ -1,0 +1,23 @@
+<MudDialog @bind-Visible="Visible">
+    <DialogContent>
+        <div style="text-align: center; padding: 12px 8px;">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+            <MudText Typo="Typo.h5" Style="margin-top: 12px; color: #1A237E;">Successfully Created</MudText>
+            <MudText Typo="Typo.body1" Style="margin-top: 8px; color: #546E7A;">@Message</MudText>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">Continue</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public string Message { get; set; } = string.Empty;
+
+    private Task Close()
+    {
+        return VisibleChanged.InvokeAsync(false);
+    }
+}

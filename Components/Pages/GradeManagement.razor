@@ -1,0 +1,227 @@
+@page "/grades"
+@page "/grademanagement"
+
+@using Microsoft.AspNetCore.Components.Authorization
+@using StudentManagementSystem.Features.Data.Models
+@using StudentManagementSystem.Features.Helpers
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject IGradeService GradeService
+@inject IEnrollmentService EnrollmentService
+@inject AuthenticationStateProvider AuthProvider
+@inject ISnackbar Snackbar
+
+<PageTitle>Grade Management</PageTitle>
+
+@if (!_isAuthenticated)
+{
+    <RedirectToLogin />
+}
+else if (!_isInstructor)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+        Grade management is only available to instructors. Use `My Grade` from the sidebar for student records.
+    </MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" Style="color: #1A237E; margin-bottom: 16px;">
+        Grade Management
+    </MudText>
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Style="margin-bottom: 16px;">
+            Grade data is temporarily unavailable. @_loadError
+        </MudAlert>
+    }
+
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add" Style="margin-bottom: 16px;">
+        Add Grade
+    </MudButton>
+
+    <MudTable Items="@_grades" Hover="true" Elevation="2" Style="background: white;">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6" Style="color: #1A237E;">Grades</MudText>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Student</MudTh>
+            <MudTh>Course</MudTh>
+            <MudTh>Grade Value</MudTh>
+            <MudTh>Letter Grade</MudTh>
+            <MudTh>Remarks</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@(context.Enrollment?.Student?.FullName ?? "N/A")</MudTd>
+            <MudTd>@(context.Enrollment?.Course?.CourseName ?? "N/A")</MudTd>
+            <MudTd>@context.GradeValue</MudTd>
+            <MudTd>
+                <MudChip T="string" Color="@(GetGradeColor(context.LetterGrade))" Size="Size.Small">
+                    @context.LetterGrade
+                </MudChip>
+            </MudTd>
+            <MudTd>@context.Remarks</MudTd>
+            <MudTd>@context.GradedAt.ToShortDateString()</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" OnClick="@(() => DeleteGrade(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Align="Align.Center" Style="color: #546E7A;">No grades found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+
+    <MudDialog @bind-Visible="_dialogOpen">
+        <DialogContent>
+            <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">@(_isEditing ? "Edit Grade" : "Add Grade")</MudText>
+
+            <MudSelect T="int" @bind-Value="_editingGrade.EnrollmentId" Label="Enrollment" Variant="Variant.Outlined" Required>
+                @foreach (var enrollment in _enrollments)
+                {
+                    <MudSelectItem T="int" Value="@enrollment.Id">
+                        @enrollment.Student?.FullName - @enrollment.Course?.CourseName (@enrollment.Semester)
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            <MudNumericField @bind-Value="_editingGrade.GradeValue" Label="Grade Value (1.00 - 5.00)" Variant="Variant.Outlined"
+                              Min="1.0m" Max="5.0m" Step="0.25m" Required Style="margin-top: 12px;" />
+            <MudTextField @bind-Value="_editingGrade.LetterGrade" Label="Letter Grade (e.g. A, B+, C)" Variant="Variant.Outlined" Required Style="margin-top: 12px;" />
+            <MudTextField @bind-Value="_editingGrade.Remarks" Label="Remarks" Variant="Variant.Outlined" Style="margin-top: 12px;" />
+        </DialogContent>
+        <DialogActions>
+            <MudButton Color="Color.Primary" OnClick="SaveGrade">Save</MudButton>
+            <MudButton Color="Color.Default" OnClick="CloseDialog">Cancel</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    private List<Grade> _grades = new();
+    private List<Enrollment> _enrollments = new();
+    private bool _dialogOpen;
+    private bool _isEditing;
+    private bool _isAuthenticated;
+    private bool _isInstructor;
+    private Grade _editingGrade = new();
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _isInstructor = authState.User.IsInRole("Instructor");
+
+        if (_isAuthenticated)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            if (_isInstructor)
+            {
+                _grades = (await GradeService.GetAllGradesAsync()).ToList();
+                _enrollments = (await EnrollmentService.GetAllEnrollmentsAsync()).ToList();
+            }
+            else
+            {
+                var authState = await AuthProvider.GetAuthenticationStateAsync();
+                var studentIdClaim = authState.User.FindFirst("StudentId")?.Value;
+                if (int.TryParse(studentIdClaim, out var studentId))
+                {
+                    _grades = (await GradeService.GetGradesByStudentAsync(studentId)).ToList();
+                }
+            }
+
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            _grades = new();
+            _enrollments = new();
+            _loadError = ex.Message;
+        }
+    }
+
+    private void OpenCreateDialog()
+    {
+        _isEditing = false;
+        _editingGrade = new Grade { GradedAt = DateTime.Now };
+        _dialogOpen = true;
+    }
+
+    private void OpenEditDialog(Grade grade)
+    {
+        _isEditing = true;
+        _editingGrade = new Grade
+        {
+            Id = grade.Id,
+            EnrollmentId = grade.EnrollmentId,
+            GradeValue = grade.GradeValue,
+            LetterGrade = grade.LetterGrade,
+            Remarks = grade.Remarks,
+            GradedAt = grade.GradedAt
+        };
+        _dialogOpen = true;
+    }
+
+    private void CloseDialog()
+    {
+        _dialogOpen = false;
+    }
+
+    private async Task SaveGrade()
+    {
+        try
+        {
+            if (_isEditing)
+            {
+                await GradeService.UpdateGradeAsync(_editingGrade);
+                Snackbar.Add("Grade updated successfully.", Severity.Success);
+            }
+            else
+            {
+                await GradeService.AddGradeAsync(_editingGrade);
+                Snackbar.Add("Grade added successfully.", Severity.Success);
+            }
+
+            _dialogOpen = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteGrade(Grade grade)
+    {
+        try
+        {
+            await GradeService.DeleteGradeAsync(grade.Id);
+            Snackbar.Add("Grade deleted.", Severity.Success);
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetGradeColor(string letterGrade)
+    {
+        return letterGrade.ToUpper() switch
+        {
+            "A" or "A+" => Color.Success,
+            "B+" or "B" => Color.Info,
+            "C+" or "C" => Color.Warning,
+            _ => Color.Error
+        };
+    }
+}

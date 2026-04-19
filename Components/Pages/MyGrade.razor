@@ -1,0 +1,103 @@
+@page "/my-grades"
+
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject AuthenticationStateProvider AuthProvider
+@inject IGradeService GradeService
+
+<PageTitle>My Grade</PageTitle>
+
+@if (!_isAuthenticated)
+{
+    <RedirectToLogin />
+}
+else if (!_isStudent)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+        Student access is required to view this page.
+    </MudAlert>
+}
+else
+{
+    <MudText Typo="Typo.h4" Style="color: #1A237E; margin-bottom: 16px;">My Grade</MudText>
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Style="margin-bottom: 16px;">
+            Grade data is temporarily unavailable. @_loadError
+        </MudAlert>
+    }
+
+    <MudTable Items="@_grades" Hover="true" Elevation="2" Style="background: white;">
+        <HeaderContent>
+            <MudTh>Course</MudTh>
+            <MudTh>Grade Value</MudTh>
+            <MudTh>Letter Grade</MudTh>
+            <MudTh>Remarks</MudTh>
+            <MudTh>Date</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>@(context.Enrollment?.Course?.CourseName ?? "N/A")</MudTd>
+            <MudTd>@context.GradeValue</MudTd>
+            <MudTd>
+                <MudChip T="string" Color="@(GetGradeColor(context.LetterGrade))" Size="Size.Small">
+                    @context.LetterGrade
+                </MudChip>
+            </MudTd>
+            <MudTd>@context.Remarks</MudTd>
+            <MudTd>@context.GradedAt.ToShortDateString()</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Align="Align.Center" Style="color: #546E7A;">No grades found.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+}
+
+@code {
+    private List<Grade> _grades = new();
+    private bool _isAuthenticated;
+    private bool _isStudent;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _isStudent = authState.User.IsInRole("Student");
+
+        if (_isAuthenticated && _isStudent)
+        {
+            await LoadData(authState);
+        }
+    }
+
+    private async Task LoadData(AuthenticationState authState)
+    {
+        try
+        {
+            var studentIdClaim = authState.User.FindFirst("StudentId")?.Value;
+            if (int.TryParse(studentIdClaim, out var studentId))
+            {
+                _grades = (await GradeService.GetGradesByStudentAsync(studentId)).ToList();
+            }
+
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            _grades = new();
+            _loadError = ex.Message;
+        }
+    }
+
+    private static Color GetGradeColor(string letterGrade)
+    {
+        return letterGrade.ToUpperInvariant() switch
+        {
+            "A" or "A+" => Color.Success,
+            "B+" or "B" => Color.Info,
+            "C+" or "C" => Color.Warning,
+            _ => Color.Error
+        };
+    }
+}

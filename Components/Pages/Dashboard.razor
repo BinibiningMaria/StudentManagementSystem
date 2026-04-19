@@ -1,0 +1,115 @@
+@page "/dashboard"
+
+@using StudentManagementSystem.Features.Services.Interfaces
+
+@inject AuthenticationStateProvider AuthProvider
+@inject IStudentService StudentService
+@inject ICourseService CourseService
+@inject IEnrollmentService EnrollmentService
+@inject IGradeService GradeService
+
+<PageTitle>Dashboard</PageTitle>
+
+@if (!_isAuthenticated)
+{
+    <RedirectToLogin />
+}
+else
+{
+    <MudText Typo="Typo.h4" Style="color: #1A237E; margin-bottom: 24px;">Dashboard</MudText>
+
+    @if (!string.IsNullOrWhiteSpace(_loadError))
+    {
+        <MudAlert Severity="Severity.Warning" Variant="Variant.Filled" Dense="true" Style="margin-bottom: 16px;">
+            Dashboard data is temporarily unavailable. @_loadError
+        </MudAlert>
+    }
+
+    <div style="display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 32px;">
+        <MudPaper Elevation="2" Style="padding: 24px; flex: 1; min-width: 200px; border-top: 4px solid #1A237E;">
+            <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Large" Style="color: #1A237E;" />
+            <MudText Typo="Typo.h4" Style="color: #1A237E; margin-top: 8px;">@_studentCount</MudText>
+            <MudText Typo="Typo.body1" Style="color: #546E7A;">Students</MudText>
+        </MudPaper>
+
+        <MudPaper Elevation="2" Style="padding: 24px; flex: 1; min-width: 200px; border-top: 4px solid #FF9800;">
+            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Large" Style="color: #FF9800;" />
+            <MudText Typo="Typo.h4" Style="color: #1A237E; margin-top: 8px;">@_courseCount</MudText>
+            <MudText Typo="Typo.body1" Style="color: #546E7A;">Courses</MudText>
+        </MudPaper>
+
+        <MudPaper Elevation="2" Style="padding: 24px; flex: 1; min-width: 200px; border-top: 4px solid #1A237E;">
+            <MudIcon Icon="@Icons.Material.Filled.AppRegistration" Size="Size.Large" Style="color: #1A237E;" />
+            <MudText Typo="Typo.h4" Style="color: #1A237E; margin-top: 8px;">@_enrollmentCount</MudText>
+            <MudText Typo="Typo.body1" Style="color: #546E7A;">Enrollments</MudText>
+        </MudPaper>
+
+        <MudPaper Elevation="2" Style="padding: 24px; flex: 1; min-width: 200px; border-top: 4px solid #FF9800;">
+            <MudIcon Icon="@Icons.Material.Filled.Grade" Size="Size.Large" Style="color: #FF9800;" />
+            <MudText Typo="Typo.h4" Style="color: #1A237E; margin-top: 8px;">@_gradeCount</MudText>
+            <MudText Typo="Typo.body1" Style="color: #546E7A;">Grades</MudText>
+        </MudPaper>
+    </div>
+
+    <AuthorizeView>
+        <Authorized>
+            @if (context.User.IsInRole("Instructor"))
+            {
+                <MudText Typo="Typo.h6" Style="color: #1A237E; margin-bottom: 16px;">Quick Actions</MudText>
+                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/students" StartIcon="@Icons.Material.Filled.Add">
+                        Manage Students
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/courses" StartIcon="@Icons.Material.Filled.Add">
+                        Manage Courses
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/enrollments" StartIcon="@Icons.Material.Filled.Add">
+                        Manage Enrollments
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/grades" StartIcon="@Icons.Material.Filled.Add">
+                        Manage Grades
+                    </MudButton>
+                </div>
+            }
+        </Authorized>
+    </AuthorizeView>
+}
+
+@code {
+    private int _studentCount;
+    private int _courseCount;
+    private int _enrollmentCount;
+    private int _gradeCount;
+    private bool _isAuthenticated;
+    private string? _loadError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthProvider.GetAuthenticationStateAsync();
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        if (!_isAuthenticated)
+        {
+            return;
+        }
+
+        try
+        {
+            var students = await StudentService.GetAllStudentsAsync();
+            _studentCount = students.Count();
+
+            var courses = await CourseService.GetAllCoursesAsync();
+            _courseCount = courses.Count();
+
+            var enrollments = await EnrollmentService.GetAllEnrollmentsAsync();
+            _enrollmentCount = enrollments.Count();
+
+            var grades = await GradeService.GetAllGradesAsync();
+            _gradeCount = grades.Count();
+            _loadError = null;
+        }
+        catch (Exception ex)
+        {
+            _loadError = ex.Message;
+        }
+    }
+}

@@ -1,0 +1,44 @@
+@page "/"
+@page "/home"
+@layout StudentManagementSystem.Components.Layout.LandingLayout
+
+<PageTitle>Home</PageTitle>
+
+<div style="text-align: center; padding: 60px 20px;">
+    <MudText Typo="Typo.h3" Style="color: #1A237E; font-weight: 700;">Welcome to Student Management System</MudText>
+    <MudText Typo="Typo.h6" Style="color: #546E7A; margin-top: 16px;">
+        Manage students, courses, enrollments, and grades — all in one place.
+    </MudText>
+
+    <div style="margin-top: 40px; display: flex; justify-content: center; gap: 16px; flex-wrap: wrap;">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login" Size="Size.Large">
+            Sign In
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" Href="/register" Size="Size.Large">
+            Register
+        </MudButton>
+    </div>
+
+    <div style="margin-top: 60px; display: flex; justify-content: center; gap: 32px; flex-wrap: wrap;">
+        <MudPaper Elevation="2" Style="padding: 24px; width: 200px; text-align: center; border-top: 3px solid #1A237E;">
+            <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Large" Style="color: #1A237E;" />
+            <MudText Typo="Typo.h6" Style="color: #1A237E; margin-top: 8px;">Students</MudText>
+            <MudText Typo="Typo.body2" Style="color: #546E7A;">Manage student records</MudText>
+        </MudPaper>
+        <MudPaper Elevation="2" Style="padding: 24px; width: 200px; text-align: center; border-top: 3px solid #FF9800;">
+            <MudIcon Icon="@Icons.Material.Filled.MenuBook" Size="Size.Large" Style="color: #FF9800;" />
+            <MudText Typo="Typo.h6" Style="color: #1A237E; margin-top: 8px;">Courses</MudText>
+            <MudText Typo="Typo.body2" Style="color: #546E7A;">Organize course offerings</MudText>
+        </MudPaper>
+        <MudPaper Elevation="2" Style="padding: 24px; width: 200px; text-align: center; border-top: 3px solid #1A237E;">
+            <MudIcon Icon="@Icons.Material.Filled.AppRegistration" Size="Size.Large" Style="color: #1A237E;" />
+            <MudText Typo="Typo.h6" Style="color: #1A237E; margin-top: 8px;">Enrollments</MudText>
+            <MudText Typo="Typo.body2" Style="color: #546E7A;">Track student enrollments</MudText>
+        </MudPaper>
+        <MudPaper Elevation="2" Style="padding: 24px; width: 200px; text-align: center; border-top: 3px solid #FF9800;">
+            <MudIcon Icon="@Icons.Material.Filled.Grade" Size="Size.Large" Style="color: #FF9800;" />
+            <MudText Typo="Typo.h6" Style="color: #1A237E; margin-top: 8px;">Grades</MudText>
+            <MudText Typo="Typo.body2" Style="color: #546E7A;">Record academic performance</MudText>
+        </MudPaper>
+    </div>
+</div>
